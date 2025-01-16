@@ -1,0 +1,1732 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Cordial Oracle
+  summary: Cordial Oracle
+  description: |
+    This module is also used by the end users to specify which addresses to listen to.
+    Once the user subscribes to an address, then related transactions and balance updates will start being tracked.
+
+    All the endpoints, including subscribing and unsubscribing, are idempotent 
+    so users can send multiple identical requests without errors.
+
+    If an address subscription is older than 30 days, then it may be deleted automatically.
+    You can subscribe addresses periodically to avoid this.
+
+    Each endpoint multi-tenant, and segregated by organization identity, which means the requestor can 
+    never access the list of addresses, balances, or transactions of the other organizations.
+
+    ### Organization Identity
+
+    The organization identity is specified by a header `Organization` or a query parameter `organization`.
+
+    This service, as all others, is guarded by the Auth API. It sets and/or verifies the organization identity of the request.
+
+    An end user either uses an API key (generated in the Admin API, and tied to a specific organization),
+    or an access token (generated via login to the Auth API and tied to a specific user).
+
+    In case an access token is used, and the user happens to be in multiple organizations,
+    the user can specify the desired organization ID via header or query parameter.
+
+    ### Pagination
+
+    The API also supports pagination as the list of transactions and even balances can 
+    be very long. The pagination is implemented following to https://google.aip.dev/158 
+    with minor differences: **users cannot change page size once the page token is generated 
+    and there can be slightly more elements returned than asked.**  
+    These deviations were necessary due to a versatile set of pagination mechanisms used by 
+    the third-party providers and we had to fit them under a single pagination mechanism.
+
+    The pagination is encapsulated from the user via the page token mechanism.  
+    The page token is a base64 string that holds the pagination info like page size and offset, 
+    but its structure can be different for each provider, that's why the token is obfuscated 
+    via base64.
+
+    To use the pagination user can specify an optional `page_size` query parameter. 
+    The response will then contain a `next_page_token` field that should be passed as a `page_token` 
+    query parameter to retrieve the next page.
+    If the returned next page token is empty it means there are no more elements left.
+servers:
+  - url: 'https://oracle.cordialapis.com/v1'
+    description: Production
+  - url: 'http://localhost:9998/v1'
+    description: Development (port ORCL)
+paths:
+  /assets:
+    get:
+      tags:
+        - Asset
+      summary: List Assets
+      description: List all the assets tracked by Oracle
+      operationId: list-assets
+      parameters:
+        - name: page_size
+          in: query
+          description: Amount of elements to return per page
+          schema:
+            type: integer
+        - name: page_token
+          in: query
+          description: Pagination token returned from the previous request
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+  /assets/prices:
+    get:
+      tags:
+        - Asset
+      summary: List asset prices
+      description: Retrieves USD pricing on assets.
+      operationId: list-asset-prices
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Price'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+  '/chains/{chain}':
+    get:
+      tags:
+        - Chain
+      summary: Get Chain
+      operationId: get-chain
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chain'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+      x-internal: false
+  /chains:
+    get:
+      tags:
+        - Chain
+      summary: List Chains
+      description: List all chains supported by the service.
+      operationId: list-chains
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChainPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+      x-internal: false
+  /addresses:
+    get:
+      tags:
+        - Address
+      summary: List Addresses
+      description: Lists all the addresses the user is subscribed to.
+      operationId: list-addresses
+      parameters:
+        - name: Organization
+          in: header
+          description: Requester's identity
+          required: true
+          schema:
+            type: string
+        - name: page_size
+          in: query
+          description: Amount of elements to return per page
+          schema:
+            type: string
+        - name: page_token
+          in: query
+          description: Pagination token returned from the previous request
+          schema:
+            type: string
+      requestBody:
+        description: ''
+        content: {}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+  '/chains/{chain}/addresses':
+    get:
+      tags:
+        - Address
+      summary: List Chain Addresses
+      description: Lists all the addresses on the specific chain the user is subscribed to.
+      operationId: list-chain-addresses
+      parameters:
+        - name: Organization
+          in: header
+          description: Requester's identity
+          required: true
+          schema:
+            type: string
+        - name: page_size
+          in: query
+          description: Amount of elements to return per page
+          schema:
+            type: string
+        - name: page_token
+          in: query
+          description: Pagination token returned from the previous request
+          schema:
+            type: string
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+  '/chains/{chain}/addresses/{address}':
+    delete:
+      tags:
+        - Address
+      summary: Unsubscribe Address
+      description: |-
+        Unsubscribes the user from the specified address.
+
+        This does not recursively remove the transaction data created so far.
+      operationId: delete-address
+      parameters:
+        - name: Organization
+          in: header
+          description: Requester's identity
+          required: true
+          schema:
+            type: string
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+    put:
+      tags:
+        - Address
+      summary: Subscribe Address
+      description: |-
+        Subscribe for balance and transaction data on a given address.
+
+        If the "normalization" of an address mangles it, set the `address` field.
+        It is otherwise optional.
+
+        If an address subscription is older than 30 days, then it may be deleted automatically.
+        You can subscribe addresses periodically to avoid this.
+      operationId: subscribe-address
+      parameters:
+        - name: Organization
+          in: header
+          description: Requester's identity
+          required: true
+          schema:
+            type: string
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: |
+          Subscribes the organization to the specified address.
+
+          Creating an address puts it on the oracle's watchlist, it will backfill and start adding transactions as they occur.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Address'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+    get:
+      tags:
+        - Address
+      summary: Get Address
+      operationId: get-address
+      parameters:
+        - name: Organization
+          in: header
+          description: Requester's identity
+          required: true
+          schema:
+            type: string
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        2XX:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+  /balances:
+    get:
+      tags:
+        - Balance
+      summary: List Balances
+      description: List all balances for addresses that have been subscribed to.
+      operationId: list-balances
+      parameters:
+        - name: page_token
+          in: query
+          schema:
+            type: string
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressBalancesPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+  '/chains/{chain}/balances':
+    get:
+      tags:
+        - Balance
+      summary: List Chain Balances
+      description: List all balances for addresses that have been subscribed to on a given chain.
+      operationId: list-chain-balances
+      parameters:
+        - name: page_token
+          in: query
+          schema:
+            type: string
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressBalancesPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+  '/chains/{chain}/addresses/{address}/balances':
+    get:
+      tags:
+        - Balance
+      summary: List Address Balances
+      description: Lists all the balances for an address that has been subscribed to.
+      operationId: list-address-balances
+      parameters:
+        - name: Organization
+          in: header
+          description: Requester's identity
+          required: true
+          schema:
+            type: string
+        - name: page_size
+          in: query
+          description: 'Amount of elements to return per page    '
+          schema:
+            type: string
+        - name: page_token
+          in: query
+          description: Pagination token returned from the previous request
+          schema:
+            type: string
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressBalancesPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+  '/chains/{chain}/address/{address}/balances/{asset}':
+    get:
+      tags:
+        - Balance
+      summary: Get Balance
+      operationId: get-balance
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: asset
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressBalance'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+  '/chains/{chain}/transactions/{hash}':
+    get:
+      tags:
+        - Transaction
+      summary: Get Transaction
+      description: 'Returns full transaction information, as can be seen from connector API.'
+      operationId: get-transaction
+      parameters:
+        - name: Organization
+          in: header
+          description: Requester's identity
+          required: true
+          schema:
+            type: string
+        - name: chain
+          in: path
+          description: Chain of the transaction
+          required: true
+          schema:
+            type: string
+        - name: hash
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+  '/chains/{chain}/addresses/{address}/transactions':
+    get:
+      tags:
+        - Transaction
+      summary: List Address Transactions
+      description: Lists transactions related to the address in descending order by block time.
+      operationId: list-address-transactions
+      parameters:
+        - name: page_token
+          in: query
+          schema:
+            type: string
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+        - name: order_by
+          in: query
+          schema:
+            type: string
+        - name: filter
+          in: query
+          schema:
+            type: string
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressTransactionPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+  /transactions:
+    get:
+      tags:
+        - Transaction
+      summary: List Transactions
+      description: 'List all transactions, in descending order of the mined block time.'
+      operationId: list-transactions
+      parameters:
+        - name: page_token
+          in: query
+          schema:
+            type: string
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+        - name: filter
+          in: query
+          schema:
+            type: string
+        - name: order_by
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+  /deposits:
+    get:
+      tags:
+        - Deposit
+      summary: List Deposits
+      description: 'List all deposits, in descending order of the mined block time.'
+      operationId: list-deposits
+      parameters:
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+        - name: page_token
+          in: query
+          schema:
+            type: string
+        - name: order_by
+          in: query
+          description: 'Values should be a comma separated list of fields. For example: "foo,bar". The default sorting order is ascending. To specify descending order for a field, users append a " desc" suffix; for example: "foo desc, bar".'
+          schema:
+            type: string
+        - name: filter
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepositPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+      x-internal: false
+  '/chains/{chain}/transactions/{hash}/movements/{movement}/deposits/{deposit}':
+    get:
+      tags:
+        - Deposit
+      summary: Get Deposit
+      operationId: get-deposit
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: hash
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: movement
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deposit
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deposit'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+      x-internal: false
+  '/chains/{chain}/addresses/{address}/deposits':
+    get:
+      tags:
+        - Deposit
+      summary: List Address Deposits
+      operationId: list-address-deposits
+      parameters:
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+        - name: page_token
+          in: query
+          schema:
+            type: string
+        - name: order_by
+          in: query
+          description: 'Values should be a comma separated list of fields. For example: "foo,bar". The default sorting order is ascending. To specify descending order for a field, users append a " desc" suffix; for example: "foo desc, bar".'
+          schema:
+            type: string
+        - name: filter
+          in: query
+          schema:
+            type: string
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepositPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+      x-internal: false
+  /withdrawals:
+    get:
+      tags:
+        - Withdrawal
+      summary: List Withdrawals
+      operationId: list-withdrawals
+      parameters:
+        - name: order_by
+          in: query
+          schema:
+            type: string
+        - name: filter
+          in: query
+          schema:
+            type: string
+        - name: page_token
+          in: query
+          schema:
+            type: string
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WithdrawalPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+      x-internal: false
+  '/chains/{chain}/addresses/{address}/withdrawals':
+    get:
+      tags:
+        - Withdrawal
+      summary: List Address Withdrawals
+      operationId: list-address-withdrawals
+      parameters:
+        - name: order_by
+          in: query
+          schema:
+            type: string
+        - name: filter
+          in: query
+          schema:
+            type: string
+        - name: page_token
+          in: query
+          schema:
+            type: string
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WithdrawalPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+      x-internal: false
+  '/chains/{chain}/transactions/{hash}/movements/{movement}/withdrawals/{withdrawal}':
+    get:
+      tags:
+        - Withdrawal
+      summary: Get Withdrawal
+      operationId: get-withdrawal
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: hash
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: movement
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: withdrawal
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Withdrawal'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+      x-internal: false
+  /movements:
+    get:
+      tags:
+        - Movement
+      summary: List Movements
+      operationId: list-movements
+      parameters:
+        - name: order_by
+          in: query
+          schema:
+            type: string
+        - name: filter
+          in: query
+          schema:
+            type: string
+        - name: page_token
+          in: query
+          schema:
+            type: string
+        - name: page_size
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovementPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+      x-internal: false
+  '/chains/{chain}/addresses/{address}/movements':
+    get:
+      tags:
+        - Movement
+      summary: List Address Movements
+      operationId: list-address-movements
+      parameters:
+        - name: order_by
+          in: query
+          schema:
+            type: string
+        - name: filter
+          in: query
+          schema:
+            type: string
+        - name: page_token
+          in: query
+          schema:
+            type: string
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovementPage'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+      x-internal: false
+  '/chains/{chain}/transactions/{hash}/movements/{movement}':
+    get:
+      tags:
+        - Movement
+      summary: Get Movement
+      operationId: get-movement
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: hash
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: movement
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Movement'
+      servers:
+        - url: 'https://oracle.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:9998/v1'
+          description: Development (port ORCL)
+      x-internal: false
+tags:
+  - name: Address
+  - name: Asset
+  - name: Balance
+  - name: Chain
+  - name: Deposit
+  - name: Transaction
+  - name: Transfer
+components:
+  schemas:
+    AssetPage:
+      type: object
+      title: AssetPage
+      allOf:
+        - type: object
+          properties:
+            assets:
+              type: array
+              items:
+                $ref: '#/components/schemas/Asset'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    Asset:
+      type: object
+      title: Asset
+      properties:
+        name:
+          $ref: '#/components/schemas/AssetName'
+        decimal:
+          type: integer
+          format: int64
+          minimum: 0
+          default: 0
+          examples:
+            - 8
+        alternative_identifiers:
+          type: object
+          additionalProperties:
+            type: string
+      x-tags:
+        - Resource
+    AssetName:
+      type: string
+      title: AssetName
+      pattern: 'chains/[A-Za-z0-9-_]+/assets/[A-Za-z0-9-_]+'
+      examples:
+        - chains/MATIC/assets/MATIC
+      x-tags:
+        - Name
+    Pagination:
+      type: object
+      title: Pagination
+      properties:
+        next_page_token:
+          type: string
+          description: '`OPTIONAL`. If set, there are more pages, which can be requested by repeating the `List` request, setting this value as query parameter `page_token`.'
+          x-go-type-skip-optional-pointer: true
+      x-tags:
+        - Value
+    Price:
+      type: object
+      title: Price
+      properties:
+        asset_name:
+          $ref: '#/components/schemas/AssetName'
+        price:
+          type: number
+        update_time:
+          $ref: '#/components/schemas/Timestamp'
+    Timestamp:
+      type: string
+      title: Timestamp
+      description: 'Seconds since UNIX epoch, encoded as UTC timestamp (ending in Z).'
+      examples:
+        - '2023-07-30T011:30:15Z'
+      x-tags:
+        - Value
+    Chain:
+      title: Chain
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/ChainName'
+          required:
+            - name
+        - $ref: '#/components/schemas/ChainData'
+      x-tags:
+        - Resource
+    ChainName:
+      type: string
+      title: ChainName
+      pattern: 'chains/[A-Za-z0-9-_]+'
+      x-tags:
+        - Name
+    ChainData:
+      type: object
+      title: ChainData
+      properties:
+        id:
+          type: string
+        network:
+          type: string
+      examples:
+        - id: ETH
+          network: mainnet
+        - id: SOL
+          network: devnet
+      x-tags:
+        - Data
+    ChainPage:
+      title: ChainPage
+      allOf:
+        - type: object
+          properties:
+            chains:
+              type: array
+              items:
+                $ref: '#/components/schemas/Chain'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    AddressPage:
+      title: AddressPage
+      allOf:
+        - type: object
+          properties:
+            addresses:
+              type: array
+              items:
+                $ref: '#/components/schemas/Address'
+          required:
+            - addresses
+        - $ref: '#/components/schemas/Pagination'
+      x-examples: null
+      x-tags:
+        - Page
+    Address:
+      title: Address
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/AddressName'
+              description: '`OUTPUT ONLY`'
+          required:
+            - name
+        - $ref: '#/components/schemas/AddressData'
+      x-tags:
+        - Resource
+    AddressName:
+      type: string
+      title: AddressName
+      description: The name of an address consists of its parent chain name and the normalization of its on-chain representation as `Id`.
+      pattern: 'chains/[A-Za-z0-9-_]+/addresses/[A-Za-z0-9-_]+'
+      examples:
+        - chains/SOL/addresses/2mp7kgAGSUXMRPVtpJQxQwXpUw7UAhYjh2gjYeCL5zsMeL1VMKidcfeY5J1BptDtoAyb24U58qCGCe8QVui8Yz5x
+      x-tags:
+        - Name
+    AddressData:
+      type: object
+      title: AddressData
+      properties:
+        chain_id:
+          type: string
+        id:
+          type: string
+        subscribe_time:
+          $ref: '#/components/schemas/Timestamp'
+        address:
+          type: string
+          description: ' Unnormalized version of the address ID.'
+          x-deprecated: true
+        treasury_id:
+          type: string
+          description: 'The treasury that this address is associated with, e.g. `SGxCSBhhjdJ1LAGBSeAM5i`.  This will be set if the `TREASURY` header is set when creating the address.'
+        variant:
+          type: string
+          description: 'The address variant, e.g. `internal`.'
+      required:
+        - chain_id
+        - id
+        - subscribe_time
+      examples:
+        - chain_id: ETH
+          id: '0xced92fa7f0797cbc851b48140ae218a0b0d41ce0'
+          subscribe_time: '2023-07-30T011:30:15Z'
+          address: string
+      x-tags:
+        - Data
+    AddressBalancesPage:
+      title: AddressBalancesPage
+      allOf:
+        - type: object
+          properties:
+            balances:
+              type: array
+              items:
+                $ref: '#/components/schemas/AddressBalance'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    AddressBalance:
+      title: AddressBalance
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/AddressBalanceName'
+          required:
+            - name
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/AddressBalanceData'
+      x-tags:
+        - Resource
+    AddressBalanceName:
+      type: string
+      title: AddressBalanceName
+      pattern: 'chains/[A-Za-z0-9-_]+/addresses/[A-Za-z0-9-_]+/balances/[A-Za-z0-9-_]+'
+      examples:
+        - chains/ETH/addresses/0xced92fa7f0797cbc851b48140ae218a0b0d41ce0/balances/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+      x-tags:
+        - Name
+    Metadata:
+      type: object
+      title: Metadata
+      properties:
+        create_time:
+          $ref: '#/components/schemas/Timestamp'
+        update_time:
+          $ref: '#/components/schemas/Timestamp'
+      required:
+        - create_time
+      x-tags:
+        - Value
+    AddressBalanceData:
+      type: object
+      title: AddressBalanceData
+      properties:
+        address_id:
+          type: string
+        asset_id:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Amount'
+        balance:
+          $ref: '#/components/schemas/Balance'
+        address:
+          type: string
+          x-deprecated: true
+        contract:
+          type: string
+          x-deprecated: true
+      required:
+        - address_id
+        - asset_id
+        - balance
+      x-tags:
+        - Data
+    Amount:
+      type: string
+      title: Amount
+      description: 'Asset amount as decimal, encoded as string.'
+      examples:
+        - 2.13
+      x-tags:
+        - Value
+    Balance:
+      type: string
+      title: Balance
+      description: 'Base units of an asset as an integer (not adjusted for decimals), encoded as string.'
+      examples:
+        - '213213432'
+      x-tags:
+        - Value
+    Transaction:
+      title: Transaction
+      description: |
+        This is the same model as from the connector API.
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/TransactionName'
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/TransactionData'
+      x-examples:
+        Example 1:
+          details:
+            asset: ETH
+            chain: ETH
+            decimals: '18'
+            tx_hash: '0xee717d202162c4010e15b03970743915b5846a7588a5e97be96436cd750d3550'
+            tx_info:
+              amount: '93641988355351337'
+              block_hash: '0x5f9aa001779894a22aaac77a4ab6a00e0a8503f8df8f561bff6374f8d6b54025'
+              block_index: 5948580
+              block_time: 1716303072
+              confirmations: 72
+              destinations:
+                - address: '0xC4bFccB1668d6E464F33a76baDD8C8D7D341e04A'
+                  amount: '93641988355351337'
+                  chain: ETH
+              explorer_url: 'https://sepolia.etherscan.io/tx/0xee717d202162c4010e15b03970743915b5846a7588a5e97be96436cd750d3550'
+              fee: '597162596961000'
+              from: '0x13CB6AE34A13a0977F4d7101eBc24B87Bb23F0d5'
+              sources:
+                - address: '0x13CB6AE34A13a0977F4d7101eBc24B87Bb23F0d5'
+                  amount: '93641988355351337'
+                  chain: ETH
+              status: 0
+              to: '0xC4bFccB1668d6E464F33a76baDD8C8D7D341e04A'
+              tx_id: ee717d202162c4010e15b03970743915b5846a7588a5e97be96436cd750d3550
+          name: chains/ETH/transactions/0xee717d202162c4010e15b03970743915b5846a7588a5e97be96436cd750d3550
+      x-tags:
+        - Resource
+    TransactionName:
+      type: string
+      title: TransactionName
+      description: 'The name of an transactions consists of its (parent) chain name, its on-chain identifier (usually the ''transaction hash'').'
+      pattern: 'chains/[A-Za-z0-9-_]+/transactions/[A-Za-z0-9-_]+'
+      examples:
+        - chains/MATIC/transactions/0x4a0f7a74ba1824504ac7f0dd462e2b287226691828d04fee66cff42aaa6756db
+      x-tags:
+        - Name
+    TransactionData:
+      type: object
+      title: TransactionData
+      properties:
+        block:
+          $ref: '#/components/schemas/Block'
+        id:
+          type: string
+          description: The transaction's hash.
+        fees:
+          type: array
+          items:
+            $ref: '#/components/schemas/Fee'
+        movements:
+          type: array
+          items:
+            $ref: '#/components/schemas/MovementCore'
+        confirmations:
+          type: integer
+        error:
+          type: string
+          description: 'If there was an issue with the transaction, this field will be set. The transaction nevertheless occurred, and the credits and debits were applied, typically just fees.'
+        hash:
+          type: string
+          description: '`OUTPUT ONLY`. The transaction''s hash.'
+          x-deprecated: true
+        state:
+          $ref: '#/components/schemas/TransactionState'
+        final:
+          type: boolean
+          description: 'If the `confirmations` is high enough for this transaction to be considered "final" on the chain, this will be true.'
+      required:
+        - block
+        - id
+        - fees
+        - movements
+        - confirmations
+      x-tags:
+        - Data
+    Block:
+      type: object
+      title: Block
+      properties:
+        chain_id:
+          type: string
+          description: Cordial Systems identifier for the chain.
+        id:
+          type: string
+          description: The block's hash
+        height:
+          type: integer
+        time:
+          $ref: '#/components/schemas/Timestamp'
+        chain:
+          type: string
+          x-deprecated: true
+        hash:
+          type: string
+          x-deprecated: true
+      required:
+        - chain_id
+        - id
+        - height
+        - time
+      examples:
+        - chain_id: ETH
+          id: '0x5e02e3762b09328a3b90f9b8f1caa38c79385bc704fd936173d36cf11bdd88b9'
+          height: 21115105
+          time: '2023-07-30T011:30:15Z'
+          chain: chains/ETH
+          hash: '0x5e02e3762b09328a3b90f9b8f1caa38c79385bc704fd936173d36cf11bdd88b9'
+      x-tags:
+        - Value
+    Fee:
+      type: object
+      title: Fee
+      description: An amount taken for fees.
+      properties:
+        asset_id:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Amount'
+          description: 'If decimals for asset are available, `balance` field scaled by `decimals` to decimal `Amount`.'
+        balance:
+          $ref: '#/components/schemas/Balance'
+          description: The balance of `asset` sent or received by `address`.
+        asset:
+          $ref: '#/components/schemas/AssetName'
+          description: The asset being transferred.
+          x-deprecated: true
+        contract:
+          type: string
+          x-deprecated: true
+      required:
+        - asset_id
+        - balance
+      x-tags:
+        - Value
+    MovementCore:
+      type: object
+      title: MovementCore
+      properties:
+        asset_id:
+          type: string
+        id:
+          type: integer
+          description: Index `>=1` of movement within parent transaction
+        to:
+          type: array
+          items:
+            $ref: '#/components/schemas/AmountChange'
+        from:
+          type: array
+          items:
+            $ref: '#/components/schemas/AmountChange'
+        asset:
+          $ref: '#/components/schemas/AssetName'
+          x-deprecated: true
+        contract:
+          type: string
+          x-deprecated: true
+      required:
+        - asset_id
+        - id
+        - to
+        - from
+      x-tags:
+        - Value
+    AmountChange:
+      type: object
+      title: AmountChange
+      description: Change in amount for an address that contributes to a given movement.
+      properties:
+        address_id:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Amount'
+        balance:
+          $ref: '#/components/schemas/Balance'
+          description: The balance of `asset` sent or received by `address`.
+        address:
+          $ref: '#/components/schemas/AddressName'
+          description: Address that contributed funds to this movement.
+          x-deprecated: true
+        subscribed:
+          type: boolean
+      required:
+        - address_id
+        - balance
+      x-tags:
+        - Value
+    TransactionState:
+      type: string
+      enum:
+        - mining
+        - succeeded
+        - failed
+      title: TransactionState
+      description: |-
+        **mining**: The transaction is not yet confirmed by any miner or validator on the network (in the "mempool").
+
+        **succeeded** The transaction is validated by at least one validator or miner (in a "block").
+
+        **failed** The transaction failed or reverted.  The network refused to persist the transaction's changes, but the sender paid fees.
+    AddressTransactionPage:
+      allOf:
+        - type: object
+          properties:
+            address:
+              $ref: '#/components/schemas/AddressName'
+            transactions:
+              type: array
+              items:
+                $ref: '#/components/schemas/Transaction'
+        - $ref: '#/components/schemas/Pagination'
+      x-examples:
+        Example 1:
+          name: chains/ETH/addresses/0x13cb6ae34a13a0977f4d7101ebc24b87bb23f0d5
+          nextPageToken: eyJzIjoxLCJvIjoyfQ
+          transactions:
+            - chains/ETH/transactions/0xee717d202162c4010e15b03970743915b5846a7588a5e97be96436cd750d3550
+      x-tags:
+        - Page
+    TransactionPage:
+      title: TransactionPage
+      allOf:
+        - type: object
+          properties:
+            transactions:
+              type: array
+              items:
+                $ref: '#/components/schemas/Transaction'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    DepositPage:
+      type: object
+      title: DepositPage
+      allOf:
+        - type: object
+          properties:
+            deposits:
+              type: array
+              items:
+                $ref: '#/components/schemas/Deposit'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    Deposit:
+      type: object
+      title: Deposit
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/DepositName'
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/DepositData'
+      x-tags:
+        - Resource
+    DepositName:
+      type: string
+      title: DepositName
+      pattern: 'chains/[A-Za-z0-9-_]+/transactions/[A-Za-z0-9-_]+/movements/[0-9]+/deposits/[0-9]+'
+      examples:
+        - chains/SOL/transactions/0xd2d6e66eca10af3db7ac50c48b6c8f9863657d1581f78f11e544c4254553f9f6/movements/1/deposits/1
+      x-tags:
+        - Name
+    DepositData:
+      type: object
+      title: DepositData
+      properties:
+        block:
+          $ref: '#/components/schemas/Block'
+        transaction_id:
+          type: string
+        movement_id:
+          type: integer
+        id:
+          type: integer
+          description: Index `>=1` of deposit within parent movement.
+        asset_id:
+          type: string
+          description: The unmodified version of contract in `asset`.
+        amount:
+          $ref: '#/components/schemas/Amount'
+        balance:
+          $ref: '#/components/schemas/Balance'
+        from_ids:
+          type: array
+          description: Address(es) that contributed to sending of this asset
+          items:
+            type: string
+        to_id:
+          type: string
+          description: The address that received the asset.
+        confirmations:
+          type: integer
+        error:
+          type: string
+        state:
+          $ref: '#/components/schemas/TransactionState'
+        final:
+          type: boolean
+          description: 'If the `confirmations` is high enough for this transaction to be considered "final" on the chain, this will be true.'
+      required:
+        - block
+        - transaction_id
+        - movement_id
+        - id
+        - asset_id
+        - balance
+        - from_ids
+        - to_id
+        - confirmations
+      x-tags:
+        - Data
+    WithdrawalPage:
+      type: object
+      title: WithdrawalPage
+      allOf:
+        - type: object
+          properties:
+            withdrawals:
+              type: array
+              items:
+                $ref: '#/components/schemas/Withdrawal'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    Withdrawal:
+      type: object
+      title: Withdrawal
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/WithdrawalName'
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/WithdrawalData'
+      x-tags:
+        - Resource
+    WithdrawalName:
+      type: string
+      title: WithdrawalName
+      pattern: 'chains/[A-Za-z0-9-_]+/transactions/[A-Za-z0-9-_]+/movements/[0-9]+/withdrawals/[0-9]+'
+      examples:
+        - chains/ETH/transactions/0xd2d6e66eca10af3db7ac50c48b6c8f9863657d1581f78f11e544c4254553f9f6/movements/1/withdrawals/1
+      x-tags:
+        - Name
+    WithdrawalData:
+      type: object
+      title: WithdrawalData
+      properties:
+        block:
+          $ref: '#/components/schemas/Block'
+        transaction_id:
+          type: string
+        movement_id:
+          type: integer
+        id:
+          type: integer
+          description: Index `>=1` of withdrawal within parent movement.
+        asset_id:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Amount'
+        balance:
+          $ref: '#/components/schemas/Balance'
+        from_id:
+          type: string
+          description: The address that sent the asset.
+        to_ids:
+          type: array
+          description: The address(es) that have received at least some of this asset.
+          items:
+            type: string
+        confirmations:
+          type: integer
+        error:
+          type: string
+        state:
+          $ref: '#/components/schemas/TransactionState'
+        final:
+          type: boolean
+          description: 'If the `confirmations` is high enough for this transaction to be considered "final" on the chain, this will be true.'
+      required:
+        - block
+        - transaction_id
+        - movement_id
+        - id
+        - asset_id
+        - from_id
+        - to_ids
+        - confirmations
+      x-tags:
+        - Data
+    MovementPage:
+      type: object
+      title: MovementPage
+      allOf:
+        - type: object
+          properties:
+            movements:
+              type: array
+              items:
+                $ref: '#/components/schemas/Movement'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    Movement:
+      type: object
+      title: Movement
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/MovementName'
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/MovementData'
+      x-tags:
+        - Resource
+    MovementName:
+      type: string
+      title: MovementName
+      pattern: 'chains/[A-Za-z0-9-_]+/transactions/[A-Za-z0-9-_]+/movements/[0-9]+'
+      examples:
+        - chains/SOL/transactions/0xd2d6e66eca10af3db7ac50c48b6c8f9863657d1581f78f11e544c4254553f9f6/movements/1
+      x-tags:
+        - Name
+    MovementData:
+      type: object
+      title: MovementData
+      examples:
+        - asset_id: MATIC
+          from:
+            - balance: '2222222'
+              address_id: '0x732134d7f99b90c704d736b360db45425073380f'
+            - balance: '1000000000'
+              address_id: '0x732134d7f99b90c704d736b360db45425073380f'
+          to:
+            - balance: '1000000000'
+              address_id: '0xedf073581267d82b6e4fd63b5fb288f1876555cd'
+      allOf:
+        - type: object
+          properties:
+            block:
+              $ref: '#/components/schemas/Block'
+            transaction_id:
+              type: string
+          required:
+            - block
+            - transaction_id
+        - $ref: '#/components/schemas/MovementCore'
+        - type: object
+          properties:
+            confirmations:
+              type: integer
+            error:
+              type: string
+          required:
+            - confirmations
+        - type: object
+          properties:
+            state:
+              $ref: '#/components/schemas/TransactionState'
+            final:
+              type: boolean
+              description: 'If the `confirmations` is high enough for this transaction to be considered "final" on the chain, this will be true.'
+      x-tags:
+        - Data
+x-internal: false

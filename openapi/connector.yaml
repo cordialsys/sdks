@@ -1,0 +1,813 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Cordial Connector
+  summary: Cordial Connector
+servers:
+  - url: 'https://connector.cordialapis.com/v1'
+    description: Production
+paths:
+  '/chains/{chain}/addresses/{address}/assets/{asset}':
+    get:
+      tags:
+        - Address
+      summary: Get Balance
+      description: |-
+        Replaces `/v1/__crosschain/balance` in previous API.
+
+        This is now cacheable for the server, but in general a GET will cause a direct RPC call.
+
+        Note that the query parameter determines which balances will be return.
+      operationId: get-balance
+      parameters:
+        - name: assets
+          in: query
+          description: Comma-separated list of asset names
+          schema:
+            type: string
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: asset
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressBalance'
+      servers:
+        - url: 'https://connector.cordialapis.com/v1'
+          description: Production
+  '/chains/{chain}/addresses/{address}/staking':
+    get:
+      tags:
+        - Staking
+      summary: Get Staking Balances
+      description: ''
+      operationId: get-staking-balance
+      parameters:
+        - name: validator
+          in: query
+          description: 'Validator that balances are staked against, if applicable'
+          schema:
+            type: string
+        - name: account
+          in: query
+          description: 'Account that balances are staked in, if applicable'
+          schema:
+            type: string
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StakedBalance'
+      servers:
+        - url: 'https://connector.cordialapis.com/v1'
+          description: Production
+      x-internal: false
+  '/chains/{chain}/transactions/{transaction}':
+    get:
+      tags:
+        - Transaction
+      summary: Get Transaction
+      description: Replaces `/v1/__crosschain/info` in previous API.
+      operationId: get-transaction
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: transaction
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+      servers:
+        - url: 'https://crosschain.cordialapis.com/v1'
+          description: ''
+  '/chains/{chain}/transactions':
+    post:
+      tags:
+        - Transaction
+      summary: Submit Transaction
+      description: Replaces `/v1/__crosschain/submit` in previous API.
+      operationId: create-transaction
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitTransactionRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+      servers:
+        - url: 'https://connector.cordialapis.com/v1'
+          description: Production
+      x-internal: false
+  '/chains/{chain}/transfers':
+    post:
+      tags:
+        - Transfer
+      summary: Prepare Transfer
+      description: Replaces `/v1/__crosschain/info` in previous API.
+      operationId: create-transfer
+      parameters:
+        - name: network
+          in: query
+          schema:
+            type: string
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrepareTransferResponse'
+      servers:
+        - url: 'https://connector.cordialapis.com/v1'
+          description: Production
+  '/chains/{chain}/stakes':
+    post:
+      tags:
+        - Staking
+      summary: Prepare Stake
+      description: ''
+      operationId: prepare-stake
+      parameters:
+        - name: x-service-api-key
+          in: header
+          description: 'API key for staking provider, if used.'
+          schema:
+            type: string
+        - name: validator
+          in: query
+          schema:
+            type: string
+        - name: account
+          in: query
+          schema:
+            type: string
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StakingRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrepareTransferResponse'
+      servers:
+        - url: 'https://connector.cordialapis.com/v1'
+          description: Production
+      x-internal: false
+  '/chains/{chain}/unstakes':
+    post:
+      tags:
+        - Staking
+      summary: Prepare Unstake
+      description: ''
+      operationId: prepare-unstake
+      parameters:
+        - name: x-service-api-key
+          in: header
+          description: 'API key for staking provider, if used.'
+          schema:
+            type: string
+        - name: validator
+          in: query
+          schema:
+            type: string
+        - name: account
+          in: query
+          schema:
+            type: string
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StakingRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrepareTransferResponse'
+      servers:
+        - url: 'https://connector.cordialapis.com/v1'
+          description: Production
+      x-internal: false
+  '/chains/{chain}/withdraws':
+    post:
+      tags:
+        - Staking
+      summary: Prepare Withdraw
+      description: ''
+      operationId: prepare-withdraw
+      parameters:
+        - name: x-service-api-key
+          in: header
+          description: 'API key for staking provider, if used.'
+          schema:
+            type: string
+        - name: validator
+          in: query
+          schema:
+            type: string
+        - name: account
+          in: query
+          schema:
+            type: string
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StakingRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrepareTransferResponse'
+      servers:
+        - url: 'https://connector.cordialapis.com/v1'
+          description: Production
+      x-internal: false
+  /chains:
+    get:
+      tags:
+        - Chain
+      summary: List Chains
+      operationId: list-chains
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChainList'
+      servers:
+        - url: 'https://connector.cordialapis.com/v1'
+          description: Production
+  '/chains/{chain}':
+    get:
+      tags:
+        - Chain
+      summary: Get Chain
+      operationId: get-chain
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chain'
+      servers:
+        - url: 'https://connector.cordialapis.com/v1'
+          description: Production
+  '/chains/{chain}/assets/{asset}/decimals':
+    get:
+      tags:
+        - Asset
+      summary: Get Decimals
+      description: Get the precision (or "decimals") for a specific asset on a chain.
+      operationId: get-decimals
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: asset
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: integer
+              examples:
+                Example 1:
+                  value: 18
+      servers:
+        - url: 'https://connector.cordialapis.com/v1'
+          description: Production
+tags:
+  - name: Address
+  - name: Chain
+  - name: Transaction
+  - name: Transfer
+components:
+  schemas:
+    AddressBalance:
+      type: object
+      title: AddressBalance
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/AddressBalanceName'
+            address:
+              type: string
+            balance:
+              $ref: '#/components/schemas/Amount'
+            contract:
+              type: string
+          required:
+            - name
+            - address
+            - balance
+            - contract
+    AddressBalanceName:
+      type: string
+      title: AddressBalanceName
+      examples:
+        - chains/ETH/addresses/0x1234/assets/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+    Amount:
+      type: string
+      title: Amount
+      description: 'Asset amount as decimal, encoded as string.'
+    StakedBalance:
+      type: object
+      title: StakedBalance
+      description: A balance for an asset that is staked to some validator and/or an account.
+      properties:
+        validator:
+          type: string
+        account:
+          type: string
+        balance:
+          type: object
+          properties:
+            active:
+              $ref: '#/components/schemas/Balance'
+              description: 'Balance that is active, and would be earning yield if applicable.'
+            activating:
+              $ref: '#/components/schemas/Balance'
+              description: Balance that is still waiting to become active.
+            deactivating:
+              $ref: '#/components/schemas/Balance'
+              description: Balance that is not longer active and waiting to become inactive.
+            inactive:
+              $ref: '#/components/schemas/Balance'
+              description: Balance that is not earning any applicable yield and may be withdrawn.
+      required:
+        - validator
+    Balance:
+      type: string
+      title: Balance
+      description: 'Base units of an asset as an integer (not adjusted for decimals), encoded as string.'
+      examples:
+        - '34592857439'
+    Transaction:
+      title: Transaction
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/TransactionName'
+        - $ref: '#/components/schemas/TransactionData'
+    TransactionName:
+      type: string
+      title: TransactionName
+      description: Transaction ID is the "tx hash" as assigned by the corresponding chain.
+      pattern: 'chains/[0-9A-Za-z_-]+/transfers/[0-9A-Za-z_-]+'
+      examples:
+        - chains/SOL/transactions/Q1QU5bA9YdxjkZ6YwuzuJffDBc9dBSuuYR8BPa4gu9FzJG9wDA7qCWxGMipVLEvkTCWRunyCNkmGghsJd8p6THf
+    TransactionData:
+      type: object
+      title: TransactionData
+      properties:
+        block:
+          $ref: '#/components/schemas/Block'
+        hash:
+          type: string
+          description: '`OPTIONAL`. Common unique identifier for the transaction, usually the "hash". Required if its normalization in the ID mangles.'
+        movements:
+          type: array
+          items:
+            $ref: '#/components/schemas/MovementData'
+        confirmations:
+          type: integer
+        error:
+          type: string
+          description: 'If there was an issue with the transaction, this field will be set. The transaction nevertheless occurred, and the credits and debits were applied.  Typically this is just to take fees.'
+        chain:
+          type: string
+        fees:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeeChange'
+        stakes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Staking'
+        unstakes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Staking'
+        state:
+          $ref: '#/components/schemas/TransactionState'
+        final:
+          type: boolean
+          description: 'If the `confirmations` is high enough for this transaction to be considered "final" on the chain, this will be true.'
+      required:
+        - block
+        - hash
+        - movements
+        - confirmations
+        - chain
+        - fees
+        - stakes
+        - unstakes
+    Block:
+      type: object
+      title: Block
+      properties:
+        hash:
+          type: string
+        height:
+          type: integer
+        time:
+          $ref: '#/components/schemas/Timestamp'
+        chain_id:
+          type: string
+      required:
+        - hash
+        - height
+        - time
+    Timestamp:
+      type: string
+      title: Timestamp
+      description: 'Seconds since UNIX epoch, encoded as RFC3339 UTC timestamp (ending in Z).'
+      examples:
+        - '2023-07-30T011:30:15Z'
+    MovementData:
+      type: object
+      title: MovementData
+      properties:
+        from:
+          type: array
+          items:
+            $ref: '#/components/schemas/BalanceChange'
+        to:
+          type: array
+          items:
+            $ref: '#/components/schemas/BalanceChange'
+        memo:
+          type: string
+        asset:
+          $ref: '#/components/schemas/AssetName'
+          x-deprecated: true
+        contract:
+          type: string
+          x-deprecated: true
+        asset_id:
+          type: string
+          description: 'The asset identifier, commonly the contract value or chain ID in case of native asset.'
+        contract_id:
+          type: string
+          description: 'This is set only when there is an on chain identifier for the asset_id that doesn''t already match `asset_id`.  E.g. this would be "0x1::aptos_coin::AptosCoin" for "APTOS".'
+      required:
+        - from
+        - to
+        - asset_id
+        - contract_id
+    BalanceChange:
+      type: object
+      title: BalanceChange
+      description: An address that contributes funds to one or more transfers.
+      properties:
+        amount:
+          $ref: '#/components/schemas/Amount'
+          description: 'If decimals for asset are available, `balance` field scaled by `decimals` to decimal `Amount`.'
+        balance:
+          $ref: '#/components/schemas/Balance'
+          description: The balance of `asset` sent or received by `address`.
+        address:
+          $ref: '#/components/schemas/AddressName'
+          description: Address that contributed funds to this transfer.
+          x-deprecated: true
+        address_id:
+          type: string
+          description: The blockchain address value affected by the balance change.
+      required:
+        - balance
+        - address_id
+    AddressName:
+      type: string
+      title: AddressName
+      pattern: 'chains/[0-9A-Za-z_-]+/addresses/[0-9A-Za-z_-]+'
+      examples:
+        - chains/ETH/addresses/0x123
+    AssetName:
+      type: string
+      title: AssetName
+      pattern: 'chains/[0-9A-Za-z_-]+/assets/[0-9A-Za-z_-]+'
+      examples:
+        - chains/ETH/assets/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+    FeeChange:
+      type: object
+      title: FeeChange
+      description: A balance change without an associated address.  This reflects fees paid in a transaction.
+      properties:
+        asset:
+          $ref: '#/components/schemas/AssetName'
+          x-deprecated: true
+        contract:
+          type: string
+          x-deprecated: true
+        asset_id:
+          type: string
+          description: 'Asset identifier, often the contract field or chain ID for native asset.'
+        amount:
+          $ref: '#/components/schemas/Amount'
+        balance:
+          $ref: '#/components/schemas/Balance'
+      required:
+        - asset_id
+        - balance
+    Staking:
+      type: object
+      title: Staking
+      description: 'A movement committing, or uncommitting an asset to/from a staked state.'
+      properties:
+        balance:
+          $ref: '#/components/schemas/Balance'
+        validator:
+          type: string
+        account:
+          type: string
+        address:
+          type: string
+      required:
+        - balance
+        - address
+      x-tags:
+        - Value
+    TransactionState:
+      type: string
+      enum:
+        - mining
+        - succeeded
+        - failed
+      title: TransactionState
+      description: |-
+        **mining**: The transaction is not yet confirmed by any miner or validator on the network (in the "mempool").
+
+        **succeeded** The transaction is validated by at least one validator or miner (in a "block").
+
+        **failed** The transaction failed or reverted.  The network refused to persist the transaction's changes, but the sender paid fees.
+    SubmitTransactionRequest:
+      type: object
+      title: SubmitTransactionRequest
+      properties:
+        tx_data:
+          $ref: '#/components/schemas/Base64'
+          description: Base64 encoding of transaction.
+        signatures:
+          type: array
+          description: |-
+            Base64 encoded array of signatures for the transactions.
+            Often the signatures are embedded into the `tx_data`, making this field optional.
+            Some chains submit signatures as separate parameters, which requires them to be passed separately.
+          items:
+            $ref: '#/components/schemas/Base64'
+      required:
+        - tx_data
+    Base64:
+      type: string
+      title: Base64
+      description: Base64 encoded string.
+      x-go-type: '[]byte'
+    TransferRequest:
+      type: object
+      title: TransferRequest
+      description: A request to create a new transaction.
+      properties:
+        from:
+          type: string
+          description: Address value.
+        to:
+          type: string
+          description: Address value.
+        balance:
+          $ref: '#/components/schemas/Balance'
+        contract:
+          type: string
+          description: Contract of the asset.  May be empty string or set to the chain value.
+      required:
+        - from
+        - to
+        - balance
+        - contract
+    PrepareTransferResponse:
+      type: object
+      title: PrepareTransferResponse
+      properties:
+        input:
+          type: string
+          description: JSON serialization of chain specific inputs for a new transaction.
+        raw_tx_input:
+          type: string
+          description: 'Deprecated, backwards compatibile field.'
+      required:
+        - input
+    StakingRequest:
+      type: object
+      title: StakingRequest
+      description: A request to create a new transaction.
+      properties:
+        from:
+          type: string
+          description: Address that owns the staking operation.
+        validator:
+          type: string
+          description: 'The validator addresses to involve, if applicable.'
+        balance:
+          $ref: '#/components/schemas/Balance'
+        account:
+          type: string
+          description: 'The account address or identifier to involve, if applicable.'
+        provider:
+          $ref: '#/components/schemas/Provider'
+      required:
+        - from
+        - balance
+    Provider:
+      type: string
+      enum:
+        - native
+        - kiln
+        - figment
+        - twinstake
+      title: Provider
+      description: 'Provider to use for transaction input.  By default, `native` will be used.  Some chains like Ethereum require a 3rd party integration to be involved to support delegated staking.'
+    ChainList:
+      type: object
+      title: ChainList
+      properties:
+        chains:
+          type: array
+          items:
+            $ref: '#/components/schemas/Chain'
+    Chain:
+      type: object
+      title: Chain
+      allOf:
+        - type: object
+          properties:
+            explorer_urls:
+              $ref: '#/components/schemas/ExplorerUrls'
+            name:
+              $ref: '#/components/schemas/ChainName'
+            description:
+              type: string
+            chain_id:
+              type: string
+            confirmations:
+              type: integer
+            network:
+              type: string
+              description: Description of the network if it's a named testnet.
+            symbol:
+              type: string
+              description: Cordial System's ID for the chain.
+            contract_id:
+              type: string
+              description: 'On chain contract identifier for the native asset, if there is one.  E.g. `0x1::aptos_coin::AptosCoin`.'
+            external:
+              type: object
+              properties:
+                dti:
+                  type: string
+                  description: DTI identifier.
+                coin_market_cap:
+                  type: object
+                  properties:
+                    asset_id:
+                      type: string
+                      description: 'CoinMarketCap identifier for the native asset of chain, if relevant.  Also known as "UCID".'
+                    chain_id:
+                      type: string
+                      description: CoinMarketCap identifier for the chain.
+                coin_gecko:
+                  type: object
+                  properties:
+                    asset_id:
+                      type: string
+                      description: 'CoinGecko ID for the native asset of chain, if relevant.'
+                    chain_id:
+                      type: string
+                indexing_co:
+                  type: object
+                  properties:
+                    chain_id:
+                      type: string
+                      description: IndexingCo identifier for the chain.
+          required:
+            - symbol
+    ExplorerUrls:
+      type: object
+      title: ExplorerUrls
+      properties:
+        address:
+          type: string
+          description: 'Explorer URL with `{}` substitution marker for the address.'
+        tx:
+          type: string
+          description: 'Explorer URL with `{}` substitution marker for the transaction hash.'
+        token:
+          type: string
+          description: 'Explorer URL with `{}` substitution marker for the token contract.'
+      examples:
+        - address: 'https://etherscan.io/address/{}'
+          tx: 'https://etherscan.io/tx/{}'
+          token: 'https://etherscan.io/token/{}'
+    ChainName:
+      type: string
+      title: ChainName
+      pattern: 'chains/[0-9A-Za-z_-]+'

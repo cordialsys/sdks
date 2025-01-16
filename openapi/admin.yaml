@@ -1,0 +1,628 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Cordial Admin
+  summary: Administrative API for Cordial Systems
+servers:
+  - url: 'https://admin.cordialapis.com/v1'
+    description: Production
+  - url: 'http://127.0.0.1:2366'
+    description: Development (port ADMN)
+paths:
+  '/users/{user}':
+    get:
+      tags:
+        - User
+      summary: Get User
+      description: ''
+      operationId: get-user
+      parameters:
+        - name: organizations
+          in: query
+          description: fetch organizations
+          schema:
+            type: boolean
+        - name: user
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                Get User Alice Smith:
+                  value:
+                    id: 142
+                    firstName: Alice
+                    lastName: Smith
+                    email: alice.smith@gmail.com
+                    dateOfBirth: '1997-10-31'
+                    emailVerified: true
+                    signUpDate: '2019-08-24'
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      servers:
+        - url: 'https://admin.cordialapis.com/v1'
+          description: Production
+        - url: 'http://127.0.0.1:2366'
+          description: Development (port ADMN)
+  /users:
+    get:
+      tags:
+        - User
+      summary: List Users
+      description: ''
+      operationId: list-users
+      parameters:
+        - name: ORGANIZATION
+          in: header
+          description: Set this to comma separated list of organizations.  Only resources that belongs to given organizations will be returned.
+          schema:
+            type: string
+        - name: organizations
+          in: query
+          description: fetch organizations
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPage'
+        '403':
+          description: Forbidden
+      servers:
+        - url: 'https://admin.cordialapis.com/v1'
+          description: Production
+        - url: 'http://127.0.0.1:2366'
+          description: Development (port ADMN)
+  /treasuries:
+    get:
+      tags:
+        - Treasury
+      summary: List Treasuries
+      operationId: list-treasuries
+      parameters:
+        - name: Authorization
+          in: header
+          description: Bear token
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreasuryPage'
+      servers:
+        - url: 'https://admin.cordialapis.com/v1'
+          description: Production
+        - url: 'http://127.0.0.1:2366'
+          description: Development (port ADMN)
+  '/treasuries/{treasury}':
+    get:
+      tags:
+        - Treasury
+      summary: Get Treasury
+      operationId: get-treasury
+      parameters:
+        - name: treasury
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Treasury'
+      servers:
+        - url: 'https://admin.cordialapis.com/v1'
+          description: Production
+        - url: 'http://127.0.0.1:2366'
+          description: Development (port ADMN)
+    post:
+      tags:
+        - Treasury
+      summary: Create Treasury
+      description: ''
+      operationId: create-treasury
+      parameters:
+        - name: treasury
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: 'The field `organzation` is required only for requests by users who are in multiple organizations, otherwise it is inferred.'
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TreasuryCreate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Treasury'
+      servers:
+        - url: 'https://admin.cordialapis.com/v1'
+          description: Production
+        - url: 'http://127.0.0.1:2366'
+          description: Development (port ADMN)
+    delete:
+      tags:
+        - Treasury
+      summary: Delete Treasury
+      operationId: delete-treasury
+      parameters:
+        - name: treasury
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://admin.cordialapis.com/v1'
+          description: Production
+        - url: 'http://127.0.0.1:2366'
+          description: Development (port ADMN)
+    put:
+      tags:
+        - Treasury
+      summary: Update Treasury
+      operationId: update-treasury
+      parameters:
+        - name: treasury
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Treasury'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Treasury'
+      servers:
+        - url: 'https://admin.cordialapis.com/v1'
+          description: Production
+        - url: 'http://127.0.0.1:2366'
+          description: Development (port ADMN)
+  /organizations:
+    get:
+      tags:
+        - Organization
+      summary: List Organizations
+      operationId: list-organizations
+      parameters:
+        - name: users
+          in: query
+          description: fetch users
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationPage'
+      servers:
+        - url: 'https://admin.cordialapis.com/v1'
+          description: Production
+        - url: 'http://127.0.0.1:2366'
+          description: Development (port ADMN)
+  '/organizations/{organization}':
+    get:
+      tags:
+        - Organization
+      summary: Get Organization
+      operationId: get-organization
+      parameters:
+        - name: users
+          in: query
+          description: fetch users
+          schema:
+            type: boolean
+        - name: organization
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+      servers:
+        - url: 'https://admin.cordialapis.com/v1'
+          description: Production
+        - url: 'http://127.0.0.1:2366'
+          description: Development (port ADMN)
+  /api-keys:
+    get:
+      tags:
+        - API Key
+      summary: List API Keys
+      operationId: list-api-keys
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyPage'
+      servers:
+        - url: 'https://admin.cordialapis.com/v1'
+          description: Production
+        - url: 'http://127.0.0.1:2366'
+          description: Development (port ADMN)
+  '/api-keys/{api-key}':
+    get:
+      tags:
+        - API Key
+      summary: Get API Key
+      operationId: get-api-key
+      parameters:
+        - name: api-key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKey'
+      servers:
+        - url: 'https://admin.cordialapis.com/v1'
+          description: Production
+        - url: 'http://127.0.0.1:2366'
+          description: Development (port ADMN)
+    post:
+      tags:
+        - API Key
+      summary: Create API Key
+      description: Must be `admin` of the organization.
+      operationId: create-api-key
+      parameters:
+        - name: api-key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyCreate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKey'
+      servers:
+        - url: 'https://admin.cordialapis.com/v1'
+          description: Production
+        - url: 'http://127.0.0.1:2366'
+          description: Development (port ADMN)
+tags:
+  - name: API Key
+  - name: Organization
+  - name: Treasury
+  - name: User
+components:
+  schemas:
+    User:
+      title: User
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/UserName'
+          required:
+            - name
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/UserData'
+      x-tags:
+        - Resource
+    UserName:
+      type: string
+      title: UserName
+      pattern: 'users/[A-Za-z0-9-_]+'
+      examples:
+        - users/2d3qy9rqnOgM1cdeQVxQowgU954
+      x-tags:
+        - Name
+    Metadata:
+      type: object
+      title: Metadata
+      properties:
+        creator:
+          $ref: '#/components/schemas/UserName'
+        create_time:
+          $ref: '#/components/schemas/Timestamp'
+        update_time:
+          $ref: '#/components/schemas/Timestamp'
+      required:
+        - creator
+        - create_time
+      x-tags:
+        - Value
+    Timestamp:
+      type: string
+      title: Timestamp
+      examples:
+        - '{YYYY}-{MM}-{DD}T{HH}:{MM}:{SS}Z'
+      x-tags:
+        - Value
+    UserData:
+      type: object
+      title: UserData
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        display_name:
+          type: string
+          description: Concatenation of first and last name
+        primary_email:
+          $ref: '#/components/schemas/Email'
+        emails:
+          type: array
+          items:
+            $ref: '#/components/schemas/Email'
+        organizations:
+          type: object
+          description: '`OUTPUT ONLY`. Keys are OrganizationName, values are `admin` or `member`'
+          additionalProperties:
+            type: string
+      x-tags:
+        - Data
+    Email:
+      type: string
+      title: Email
+      examples:
+        - john@doe.com
+      x-tags:
+        - Value
+    UserPage:
+      title: UserPage
+      allOf:
+        - type: object
+          properties:
+            users:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    Pagination:
+      type: object
+      title: Pagination
+      properties:
+        next_page_token:
+          type: string
+      x-tags:
+        - Value
+    TreasuryPage:
+      title: TreasuryPage
+      allOf:
+        - type: object
+          properties:
+            treasuries:
+              type: array
+              items:
+                $ref: '#/components/schemas/Treasury'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    Treasury:
+      title: Treasury
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/TreasuryName'
+          required:
+            - name
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/TreasuryData'
+      x-tags:
+        - Resource
+    TreasuryName:
+      type: string
+      title: TreasuryName
+      pattern: 'treasuries/[A-Za-z0-9-_]+'
+      x-tags:
+        - Name
+    TreasuryData:
+      type: object
+      title: TreasuryData
+      properties:
+        mainnet:
+          type: boolean
+        description:
+          type: string
+        organization:
+          $ref: '#/components/schemas/OrganizationName'
+        api:
+          $ref: '#/components/schemas/Url'
+      required:
+        - organization
+      x-tags:
+        - Data
+    OrganizationName:
+      type: string
+      title: OrganizationName
+      pattern: 'organizations/[A-Za-z0-9-_]+'
+      examples:
+        - organizations/2d3s5YCcWatWNxpj80TO4R9TSuC
+      x-tags:
+        - Name
+    Url:
+      type: string
+      title: Url
+      description: Valid URL
+      x-tags:
+        - Value
+    TreasuryCreate:
+      type: object
+      title: TreasuryCreate
+      properties:
+        mainnet:
+          type: boolean
+        description:
+          type: string
+        organization:
+          $ref: '#/components/schemas/OrganizationName'
+        api:
+          type: string
+      x-tags:
+        - Create
+    OrganizationPage:
+      title: OrganizationPage
+      allOf:
+        - type: object
+          properties:
+            organizations:
+              type: array
+              items:
+                $ref: '#/components/schemas/Organization'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    Organization:
+      title: Organization
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/OrganizationName'
+          required:
+            - name
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/OrganizationData'
+      x-tags:
+        - Resource
+    OrganizationData:
+      type: object
+      title: OrganizationData
+      properties:
+        display_name:
+          type: string
+        slug:
+          type: string
+        users:
+          type: object
+          description: '`OUTPUT ONLY`. Keys are UserName, values are `admin` or `member`.'
+          additionalProperties:
+            type: string
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+      examples:
+        - display_name: Cordial Systems
+          slug: cordialsys
+          private_metadata: {}
+          public_metadata: {}
+          users:
+            users/2d3qy9rqnOgM1cdeQVxQowgU954: admin
+            users/2dXYl4b82imERSujQrDdcjorq7d: member
+      x-tags:
+        - Data
+    Permission:
+      const: full-access
+      title: Permission
+      description: An organization (or possibly individual user) may or may not have a given permission.
+      x-tags:
+        - Value
+    ApiKeyPage:
+      title: ApiKeyPage
+      allOf:
+        - type: object
+          properties:
+            api-keys:
+              type: array
+              items:
+                $ref: '#/components/schemas/ApiKeyName'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    ApiKeyName:
+      type: string
+      title: ApiKeyName
+      pattern: 'api-keys/[A-Za-z0-9-_]+'
+      x-tags:
+        - Name
+    ApiKey:
+      title: ApiKey
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/ApiKeyName'
+          required:
+            - name
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/ApiKeyData'
+      x-tags:
+        - Resource
+    ApiKeyData:
+      type: object
+      title: ApiKeyData
+      properties:
+        description:
+          type: string
+        organization:
+          $ref: '#/components/schemas/OrganizationName'
+        secret:
+          type: string
+      required:
+        - organization
+        - secret
+      x-tags:
+        - Data
+    ApiKeyCreate:
+      type: object
+      title: ApiKeyCreate
+      properties:
+        description:
+          type: string
+        organization:
+          $ref: '#/components/schemas/OrganizationName'
+      required:
+        - organization
+      x-tags:
+        - Create

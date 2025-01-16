@@ -1,0 +1,298 @@
+openapi: 3.1.0
+info:
+  version: '1.0'
+  title: Cordial Auth
+  summary: Cordial Auth Server
+  description: |-
+    This is *not* a resource-oriented API like the others.
+
+    Its endpoints are either web pages, or internal for use by authenticating proxies like Caddy or NGINX.
+servers:
+  - url: 'https://auth.cordial.systems'
+    description: Production
+  - url: 'https://auth.cordialapis.com'
+    description: Production
+  - url: 'http://localhost:2884'
+    description: Development (port AUTH)
+paths:
+  /access:
+    get:
+      tags:
+        - CLI
+      summary: Access
+      description: |-
+        Request an access token, potentially having the user login.
+
+        This is intended for programmatic / CLI tools to fetch the token.
+
+        The HTML page uses the fetch API to cache the access token with a call to `/access/set`.
+
+        The client will fetch the token with a call to `/access/get`.
+
+        https://link.excalidraw.com/readonly/hrM35K7BN8pGEUdXXijk
+
+        TODO:
+        - interpret `request` as X25519 public key, encrypt the token with DH/CryptoBox.
+      operationId: access
+      parameters:
+        - name: request
+          in: query
+          description: Hex-encoding of a X25519 public key
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'This never fails, as it''s a web page.'
+          content:
+            text/html:
+              schema:
+                type: object
+      servers:
+        - url: 'https://auth.cordial.systems'
+          description: Production
+        - url: 'https://auth.cordialapis.com'
+          description: Production
+        - url: 'http://localhost:2884'
+          description: Development (port AUTH)
+  /login:
+    get:
+      tags:
+        - Web
+      summary: Login
+      description: |-
+        Replaces the URL in the browser with an appropriate call to `/login/set`,
+        after potentially having the browser user login.
+
+        https://link.excalidraw.com/readonly/JvmaRnFmnHWNVQIDVPhb
+      operationId: login
+      parameters:
+        - name: redirect_url
+          in: query
+          schema:
+            type: string
+        - name: access-token
+          in: cookie
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'This never fails, as it''s a web page.'
+          content:
+            text/html:
+              schema:
+                type: object
+      servers:
+        - url: 'https://auth.cordial.systems'
+          description: Production
+        - url: 'https://auth.cordialapis.com'
+          description: Production
+        - url: 'http://localhost:2884'
+          description: Development (port AUTH)
+  /logout:
+    get:
+      tags:
+        - Web
+      summary: Logout
+      description: |-
+        If the cookie is not set, redirects to `redirect_url`. Else, deletes cookie, and then either follows the link chain or directly redirects.
+
+        https://link.excalidraw.com/readonly/JqmtNFI6Ifb06Xf8k2sf
+      operationId: logout
+      parameters:
+        - name: redirect_url
+          in: query
+          schema:
+            type: string
+        - name: access-token
+          in: cookie
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Informational, only if called directly.'
+          content:
+            text/html:
+              schema:
+                type: object
+        '303':
+          description: 'Redirect back to `redirect_url`, or to next linked server.'
+      servers:
+        - url: 'https://auth.cordial.systems'
+          description: Production
+        - url: 'https://auth.cordialapis.com'
+          description: Production
+        - url: 'http://localhost:2884'
+          description: Development (port AUTH)
+  /verify:
+    get:
+      tags:
+        - Verify
+      summary: Verify
+      description: |-
+        Called by reverse proxies to authenticate users.
+
+        There are two cases:
+
+        - Humans: Expect a valid `access-token` to be passed either as cookie
+          (`Cookie: access-token=<access-token>` header) or bearer authorization
+          (`Authorization: Bearer <access-token>` header)
+        - Machines: Expect a valid API key to be passed as basic authorization
+          (`Authorization: Basic <api-key-id>:<api-key-secret>` header)
+
+        In either case, when valid, one or more `Organization` headers are set, containing
+        organization IDs, and optionally a suffix `;role=<role>` for humans (with role `admin` or `member`).
+        API keys are tied to an organization, and output only on `Organization` header.
+
+        If the original request had a `organization=<org-id>` query parameter, only this organization is emitted.
+
+        If the original request had a `treasury=<treasury-id>` query parameter, access to this Treasury is verified.
+
+
+
+        References:
+
+        - https://caddyserver.com/docs/caddyfile/directives/forward_auth
+        - https://docs.nginx.com/nginx/admin-guide/security-controls/configuring-subrequest-authentication/
+        - https://nginx.org/en/docs/http/ngx_http_auth_request_module.html
+
+        If the access token is valid, a 200 response will include the authenticated user in the `User` header.
+
+        If required headers are missing, or the access token is invalid, a 403 response is returned.
+
+        TODO: Redirect to /access if browser access is detected.
+      operationId: verify
+      parameters:
+        - name: X-Forwarded-Uri
+          in: header
+          description: 'Set by the proxy, the original URI'
+          schema:
+            type: string
+        - name: Authorization
+          in: header
+          description: Access token as bearer (human access) or basic (machine access)  authorization
+          schema:
+            type: string
+        - name: access-token
+          in: cookie
+          description: Access token as cookie (browser access)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |-
+            User:
+            - For human users, the `User` header is set to their user ID.
+
+            Organization:
+            - For machine users, this is set to the corresponding organization ID
+            - For human users, this can occur multiple times in the format `<org-id>;role=<role>`,
+              where `role` is either `admin` or `member`. In case the user set an `?organization=<org-id>`
+              query parameter (in the original/forwarded URI), only that organization header is set,
+              with the correct role of the user
+
+            Treasury:
+            - If the human or machine user set a `?treasury=<treasury-id>` query parameter
+              (in the original/forwarded URI), this is validated and set as header.
+          headers:
+            Organization:
+              schema:
+                type: string
+            Treasury:
+              schema:
+                type: string
+            User:
+              schema:
+                type: string
+        '403':
+          description: Forbidden
+      servers:
+        - url: 'https://auth.cordial.systems'
+          description: Production
+        - url: 'https://auth.cordialapis.com'
+          description: Production
+        - url: 'http://localhost:2884'
+          description: Development (port AUTH)
+  /access/get:
+    get:
+      tags:
+        - CLI
+      summary: Get Access
+      operationId: get-access
+      parameters:
+        - name: request
+          in: query
+          description: Hex-encoding of a X25519 public key
+          schema:
+            type: string
+      responses: {}
+      servers:
+        - url: 'https://auth.cordial.systems'
+          description: Production
+        - url: 'https://auth.cordialapis.com'
+          description: Production
+        - url: 'http://localhost:2884'
+          description: Development (port AUTH)
+  /access/set:
+    post:
+      tags:
+        - CLI
+      summary: Cache Access
+      description: Endpoint used by the web page on `/access` to cache the access token.
+      operationId: set-access
+      parameters:
+        - name: Access-Token
+          in: header
+          schema:
+            type: string
+        - name: Request
+          in: header
+          schema:
+            type: string
+      responses: {}
+      servers:
+        - url: 'https://auth.cordial.systems'
+          description: Production
+        - url: 'https://auth.cordialapis.com'
+          description: Production
+        - url: 'http://localhost:2884'
+          description: Development (port AUTH)
+  /login/set:
+    get:
+      tags:
+        - Web
+      summary: Set Login
+      operationId: set-login
+      parameters:
+        - name: access_token
+          in: query
+          schema:
+            type: string
+        - name: redirect_url
+          in: query
+          schema:
+            type: string
+        - name: access-token
+          in: cookie
+          schema:
+            type: string
+      responses:
+        '303':
+          description: 'Redirects to either next auth server (in link chain), or to requested `redirect_url`.'
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: sets a secure http-only cookie `access-token`
+        '403':
+          description: Returned if the `access_token` query parameter is not set or invalid.
+      servers:
+        - url: 'https://auth.cordial.systems'
+          description: Production
+        - url: 'https://auth.cordialapis.com'
+          description: Production
+        - url: 'http://localhost:2884'
+          description: Development (port AUTH)
+tags:
+  - name: CLI
+  - name: Verify
+  - name: Web
