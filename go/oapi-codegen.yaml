@@ -1,0 +1,11 @@
+package: types
+generate:
+  models: true
+  chi-server: false
+  client: false
+  embedded-spec: false
+  strict-server: false
+output: treasury/types/generated.go
+import-mapping:
+output-options:
+  skip-prune: true

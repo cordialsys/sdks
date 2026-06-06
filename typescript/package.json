@@ -1,0 +1,13 @@
+{
+  "name": "treasury-typescript",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "generate:types": "openapi-typescript ../treasury-openapi.yaml -o packages/sdk/src/types/openapi.d.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.6.1",
+    "typescript": "^5.7.3"
+  }
+}
