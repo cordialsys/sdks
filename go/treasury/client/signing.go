@@ -43,6 +43,16 @@ type Identity struct {
 	ed25519Key ed25519.PrivateKey
 }
 
+// PublicKey returns the hex-encoded public key used as the HTTP signature key ID.
+func (id *Identity) PublicKey() string {
+	return id.PublicKeyHex
+}
+
+// SigningAlgorithm returns the algorithm used for HTTP message signatures.
+func (id *Identity) SigningAlgorithm() SigningAlgorithm {
+	return id.Algorithm
+}
+
 // GenerateK256Identity generates a new secp256k1 identity.
 func GenerateK256Identity(userName string) (*Identity, error) {
 	privKey, err := secp256k1.GeneratePrivateKey()

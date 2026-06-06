@@ -17,11 +17,18 @@ const (
 	Customabort     Action = "custom/abort"
 	Customactivate  Action = "custom/activate"
 	Customcancel    Action = "custom/cancel"
+	Customconfirm   Action = "custom/confirm"
 	Customdisable   Action = "custom/disable"
+	Customfail      Action = "custom/fail"
+	CustomfeePayer  Action = "custom/fee-payer"
 	Customheartbeat Action = "custom/heartbeat"
+	Customload      Action = "custom/load"
 	Customprice     Action = "custom/price"
 	Customrecheck   Action = "custom/recheck"
+	Customrestore   Action = "custom/restore"
 	Customretry     Action = "custom/retry"
+	Customset       Action = "custom/set"
+	Customshare     Action = "custom/share"
 	Delete          Action = "delete"
 	Get             Action = "get"
 	List            Action = "list"
@@ -39,15 +46,29 @@ func (e Action) Valid() bool {
 		return true
 	case Customcancel:
 		return true
+	case Customconfirm:
+		return true
 	case Customdisable:
 		return true
+	case Customfail:
+		return true
+	case CustomfeePayer:
+		return true
 	case Customheartbeat:
+		return true
+	case Customload:
 		return true
 	case Customprice:
 		return true
 	case Customrecheck:
 		return true
+	case Customrestore:
+		return true
 	case Customretry:
+		return true
+	case Customset:
+		return true
+	case Customshare:
 		return true
 	case Delete:
 		return true
@@ -56,6 +77,24 @@ func (e Action) Valid() bool {
 	case List:
 		return true
 	case Update:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AddressState.
+const (
+	AddressStateActive      AddressState = "active"
+	AddressStateRegistering AddressState = "registering"
+)
+
+// Valid indicates whether the value is a known member of the AddressState enum.
+func (e AddressState) Valid() bool {
+	switch e {
+	case AddressStateActive:
+		return true
+	case AddressStateRegistering:
 		return true
 	default:
 		return false
@@ -178,6 +217,7 @@ func (e BasicState) Valid() bool {
 
 // Defines values for CallMethod.
 const (
+	CantonAccept                 CallMethod = "canton:accept"
 	EthSendTransaction           CallMethod = "eth_sendTransaction"
 	EthSignTransaction           CallMethod = "eth_signTransaction"
 	EthSignTypedDataV4           CallMethod = "eth_signTypedData_v4"
@@ -191,6 +231,8 @@ const (
 // Valid indicates whether the value is a known member of the CallMethod enum.
 func (e CallMethod) Valid() bool {
 	switch e {
+	case CantonAccept:
+		return true
 	case EthSendTransaction:
 		return true
 	case EthSignTransaction:
@@ -227,6 +269,24 @@ func (e CallState) Valid() bool {
 	case CallStateFailed:
 		return true
 	case CallStateSucceeded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CallVariant.
+const (
+	CallVariantSignature   CallVariant = "signature"
+	CallVariantTransaction CallVariant = "transaction"
+)
+
+// Valid indicates whether the value is a known member of the CallVariant enum.
+func (e CallVariant) Valid() bool {
+	switch e {
+	case CallVariantSignature:
+		return true
+	case CallVariantTransaction:
 		return true
 	default:
 		return false
@@ -1013,21 +1073,39 @@ func (e TransferState) Valid() bool {
 	}
 }
 
+// Defines values for TransferVariant.
+const (
+	TransferVariantExternal TransferVariant = "external"
+	TransferVariantInternal TransferVariant = "internal"
+)
+
+// Valid indicates whether the value is a known member of the TransferVariant enum.
+func (e TransferVariant) Valid() bool {
+	switch e {
+	case TransferVariantExternal:
+		return true
+	case TransferVariantInternal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UserState.
 const (
-	UserStateActive   UserState = "active"
-	UserStateInactive UserState = "inactive"
-	UserStateInvited  UserState = "invited"
+	Active   UserState = "active"
+	Inactive UserState = "inactive"
+	Invited  UserState = "invited"
 )
 
 // Valid indicates whether the value is a known member of the UserState enum.
 func (e UserState) Valid() bool {
 	switch e {
-	case UserStateActive:
+	case Active:
 		return true
-	case UserStateInactive:
+	case Inactive:
 		return true
-	case UserStateInvited:
+	case Invited:
 		return true
 	default:
 		return false
@@ -1210,6 +1288,9 @@ type Account struct {
 	// It's recommended to not use this field, and to query addresses directly with a filter for the account.
 	Addresses *[]AddressName `json:"addresses,omitempty"`
 
+	// AllowDangerousRawSigning `INPUT-ONLY`, immutable
+	AllowDangerousRawSigning *bool `json:"allow_dangerous_raw_signing,omitempty"`
+
 	// CreateTime Seconds since UNIX epoch, encoded as UTC timestamp (ending in Z).
 	//
 	// All resources have a `create_time` timestamp, which is set to the engine block time where the resource
@@ -1271,8 +1352,8 @@ type Account struct {
 	// Updater The resource name for a user.
 	Updater *UserName `json:"updater,omitempty"`
 
-	// Variant Internal means the engine has the key, external means it does not.
-	// Shared means the engine has the key, but it can also be used in Create Signature.
+	// Variant `internal` means the engine has the key, `external` means it does not.
+	// The `shared` variant is deprecated: it meant that the `key` was `shared` and hence allowed use via the (dangerous) raw signing API. There is now an `allow_dangerous_raw_signing` flag instead.
 	Variant *AddressVariant  `json:"variant,omitempty"`
 	Version *ResourceVersion `json:"version,omitempty"`
 }
@@ -1282,6 +1363,9 @@ type AccountData struct {
 	// Addresses The addresses belonging to this account.
 	// It's recommended to not use this field, and to query addresses directly with a filter for the account.
 	Addresses *[]AddressName `json:"addresses,omitempty"`
+
+	// AllowDangerousRawSigning `INPUT-ONLY`, immutable
+	AllowDangerousRawSigning *bool `json:"allow_dangerous_raw_signing,omitempty"`
 
 	// Defaults Keys are `AssetChoice`s, values are `AddressName`s. These used to select the destination address for a transfer with only destination account given. A more specific matching asset key overrides any less specific chain key. Also helpful for defining policies.
 	//
@@ -1340,6 +1424,9 @@ type Address struct {
 	// Algorithm Signing algorithm. ed255 and taproot are Schnorr-like, k256* and p256 are ECDSA.
 	Algorithm *Algorithm `json:"algorithm,omitempty"`
 
+	// AllowDangerousRawSigning `INPUT-ONLY`, immutable
+	AllowDangerousRawSigning *bool `json:"allow_dangerous_raw_signing,omitempty"`
+
 	// CreateTime Seconds since UNIX epoch, encoded as UTC timestamp (ending in Z).
 	//
 	// All resources have a `create_time` timestamp, which is set to the engine block time where the resource
@@ -1386,15 +1473,16 @@ type Address struct {
 	Proposal *Proposal `json:"proposal,omitempty"`
 
 	// Provider Only for validator addresses that are to be externally supplied. Designation for the validator providers, e.g. `asymmetric`.
-	Provider *string `json:"provider,omitempty"`
-
-	// State Active / deleted state for resources that don't have a more specific state machine.
-	State *BasicState `json:"state,omitempty"`
+	Provider *string       `json:"provider,omitempty"`
+	State    *AddressState `json:"state,omitempty"`
 
 	// Tags A set of strings.  Tags be referenced in policy rules, like access-rules, transfer-rules, and staking-rules.
 	//
 	// Added in `25.13.1`.
 	Tags *Tags `json:"tags,omitempty"`
+
+	// Transactions Set only if the chain requires the address to submit registration transactions in order to become active.
+	Transactions *[]TransactionName `json:"transactions,omitempty"`
 
 	// Type Select a type for the address if the chain different types.  Valid values are defined in the respective chain resource.
 	Type *string `json:"type,omitempty"`
@@ -1408,8 +1496,8 @@ type Address struct {
 	// Updater The resource name for a user.
 	Updater *UserName `json:"updater,omitempty"`
 
-	// Variant Internal means the engine has the key, external means it does not.
-	// Shared means the engine has the key, but it can also be used in Create Signature.
+	// Variant `internal` means the engine has the key, `external` means it does not.
+	// The `shared` variant is deprecated: it meant that the `key` was `shared` and hence allowed use via the (dangerous) raw signing API. There is now an `allow_dangerous_raw_signing` flag instead.
 	Variant *AddressVariant  `json:"variant,omitempty"`
 	Version *ResourceVersion `json:"version,omitempty"`
 }
@@ -1436,6 +1524,9 @@ type AddressData struct {
 	// Algorithm Signing algorithm. ed255 and taproot are Schnorr-like, k256* and p256 are ECDSA.
 	Algorithm *Algorithm `json:"algorithm,omitempty"`
 
+	// AllowDangerousRawSigning `INPUT-ONLY`, immutable
+	AllowDangerousRawSigning *bool `json:"allow_dangerous_raw_signing,omitempty"`
+
 	// FeePayer Added in `v25.13.1`.
 	//
 	// Permit or deny address to be used as a fee sponsor for transactions.  Default is to deny.
@@ -1453,6 +1544,9 @@ type AddressData struct {
 
 	// Provider Only for validator addresses that are to be externally supplied. Designation for the validator providers, e.g. `asymmetric`.
 	Provider *string `json:"provider,omitempty"`
+
+	// Transactions Set only if the chain requires the address to submit registration transactions in order to become active.
+	Transactions *[]TransactionName `json:"transactions,omitempty"`
 
 	// Type Select a type for the address if the chain different types.  Valid values are defined in the respective chain resource.
 	Type *string `json:"type,omitempty"`
@@ -1477,8 +1571,11 @@ type AddressPage struct {
 	TotalSize     *int       `json:"total_size,omitempty"`
 }
 
-// AddressVariant Internal means the engine has the key, external means it does not.
-// Shared means the engine has the key, but it can also be used in Create Signature.
+// AddressState defines model for AddressState.
+type AddressState string
+
+// AddressVariant `internal` means the engine has the key, `external` means it does not.
+// The `shared` variant is deprecated: it meant that the `key` was `shared` and hence allowed use via the (dangerous) raw signing API. There is now an `allow_dangerous_raw_signing` flag instead.
 type AddressVariant string
 
 // AddressWithAmount defines model for AddressWithAmount.
@@ -1525,9 +1622,6 @@ type AnyAddress = interface{}
 
 // AnyAsset defines model for AnyAsset.
 type AnyAsset = interface{}
-
-// AnyMethod defines model for AnyMethod.
-type AnyMethod = interface{}
 
 // AnyUser defines model for AnyUser.
 type AnyUser = interface{}
@@ -1733,7 +1827,10 @@ type Call struct {
 	// - `description`
 	// - `email`
 	// - `display-name`
-	Notes    *Notes      `json:"notes,omitempty"`
+	Notes *Notes `json:"notes,omitempty"`
+
+	// Origin Scheme, host, and port component of a URL
+	Origin   *Origin     `json:"origin,omitempty"`
 	Parse    *CallParse  `json:"parse,omitempty"`
 	Proposal *Proposal   `json:"proposal,omitempty"`
 	Request  CallRequest `json:"request"`
@@ -1749,7 +1846,8 @@ type Call struct {
 	// Tags A set of strings.  Tags be referenced in policy rules, like access-rules, transfer-rules, and staking-rules.
 	//
 	// Added in `25.13.1`.
-	Tags *Tags `json:"tags,omitempty"`
+	Tags *Tags                  `json:"tags,omitempty"`
+	To   *OneOrMoreAddressNames `json:"to,omitempty"`
 
 	// UpdateTime Seconds since UNIX epoch, encoded as UTC timestamp (ending in Z).
 	//
@@ -1758,7 +1856,10 @@ type Call struct {
 	UpdateTime *Timestamp `json:"update_time,omitempty"`
 
 	// Updater The resource name for a user.
-	Updater *UserName        `json:"updater,omitempty"`
+	Updater *UserName `json:"updater,omitempty"`
+
+	// Variant Call operations. The `signature` calls are not dangerous (not raw-signing).
+	Variant *CallVariant     `json:"variant,omitempty"`
 	Version *ResourceVersion `json:"version,omitempty"`
 }
 
@@ -1781,20 +1882,25 @@ type CallData struct {
 	// Address The name of an address consists of its (parent) chain name, its on-chain representation, and optionally a memo, separated by a `+`. In case the memo is not a valid ID, it will be mangled.
 	Address AddressName `json:"address"`
 	Method  CallMethod  `json:"method"`
+
+	// Origin Scheme, host, and port component of a URL
+	Origin  *Origin     `json:"origin,omitempty"`
 	Parse   *CallParse  `json:"parse,omitempty"`
 	Request CallRequest `json:"request"`
 
 	// Response Names the subordinate `signature` (for signing calls such as `personal_sign` and `solana:signMessage`) or `transaction` (for transactioning calls such as `eth_sendTransaction`, `eth_signTransaction`, `solana:signTransaction`, `solana:signAndSendTransaction`).
 	//
 	// Exactly one of these fields must be set.
-	Response *CallResponse `json:"response,omitempty"`
+	Response *CallResponse          `json:"response,omitempty"`
+	To       *OneOrMoreAddressNames `json:"to,omitempty"`
 }
 
 // CallFilter defines model for CallFilter.
 type CallFilter struct {
-	From   AddressFilter  `json:"from"`
-	Method MethodFilter   `json:"method"`
-	To     *AddressFilter `json:"to,omitempty"`
+	Call   *CallVariantFilter `json:"call,omitempty"`
+	From   AddressFilter      `json:"from"`
+	Method *MethodFilter      `json:"method,omitempty"`
+	To     *AddressFilter     `json:"to,omitempty"`
 }
 
 // CallMethod defines model for CallMethod.
@@ -1831,9 +1937,9 @@ type CallResponse struct {
 
 // CallRule defines model for CallRule.
 type CallRule struct {
-	Approvals *int        `json:"approvals,omitempty"`
-	Approve   *UserFilter `json:"approve,omitempty"`
-	Cancel    *UserFilter `json:"cancel,omitempty"`
+	Approvals *int               `json:"approvals,omitempty"`
+	Approve   *UserFilter        `json:"approve,omitempty"`
+	Call      *CallVariantFilter `json:"call,omitempty"`
 
 	// CreateTime Seconds since UNIX epoch, encoded as UTC timestamp (ending in Z).
 	//
@@ -1855,7 +1961,7 @@ type CallRule struct {
 	// - `creator`
 	// - `sso`
 	Labels *Labels       `json:"labels,omitempty"`
-	Method MethodFilter  `json:"method"`
+	Method *MethodFilter `json:"method,omitempty"`
 	Name   *CallRuleName `json:"name,omitempty"`
 
 	// Notes Similar to "annotations" in Kubernetes, stores "non-identifying data" ofa resource. Values are strings. It is recommended to namespace using a domain.
@@ -1887,13 +1993,13 @@ type CallRule struct {
 
 // CallRuleData defines model for CallRuleData.
 type CallRuleData struct {
-	Approvals *int           `json:"approvals,omitempty"`
-	Approve   *UserFilter    `json:"approve,omitempty"`
-	Cancel    *UserFilter    `json:"cancel,omitempty"`
-	From      AddressFilter  `json:"from"`
-	Initiate  *UserFilter    `json:"initiate,omitempty"`
-	Method    MethodFilter   `json:"method"`
-	To        *AddressFilter `json:"to,omitempty"`
+	Approvals *int               `json:"approvals,omitempty"`
+	Approve   *UserFilter        `json:"approve,omitempty"`
+	Call      *CallVariantFilter `json:"call,omitempty"`
+	From      AddressFilter      `json:"from"`
+	Initiate  *UserFilter        `json:"initiate,omitempty"`
+	Method    *MethodFilter      `json:"method,omitempty"`
+	To        *AddressFilter     `json:"to,omitempty"`
 }
 
 // CallRuleName defines model for CallRuleName.
@@ -1901,7 +2007,7 @@ type CallRuleName = string
 
 // CallRulePage defines model for CallRulePage.
 type CallRulePage struct {
-	// CallRules This is analogou to transfer rules, except the `to` address must be a `validator` address.
+	// CallRules This is analogous to transfer rules, except the `to` address must be a `validator` address.
 	CallRules     *CallRule `json:"call-rules,omitempty"`
 	NextPageToken *string   `json:"next_page_token,omitempty"`
 	PageSize      *int      `json:"page_size,omitempty"`
@@ -1920,6 +2026,12 @@ type CallState string
 type CallTransaction struct {
 	Transaction *TransactionName `json:"transaction,omitempty"`
 }
+
+// CallVariant Call operations. The `signature` calls are not dangerous (not raw-signing).
+type CallVariant string
+
+// CallVariantFilter defines model for CallVariantFilter.
+type CallVariantFilter = FlexibleArray
 
 // Certificate A certificate is a request to a `Signatory` signer.  The certificate should be signed by an authorization key.  The `Signatory` should verify the signature and claims.  Pending verification, it should then sign `message` with the specified key.
 type Certificate struct {
@@ -2143,6 +2255,9 @@ type Credential struct {
 	// RawId Standard Base64 encoded bytes.
 	RawId *StdBase64 `json:"raw_id,omitempty"`
 
+	// RpIdHash Standard Base64 encoded bytes.
+	RpIdHash *StdBase64 `json:"rp_id_hash,omitempty"`
+
 	// State Active / deleted state for resources that don't have a more specific state machine.
 	State *BasicState `json:"state,omitempty"`
 
@@ -2176,6 +2291,9 @@ type CredentialData struct {
 
 	// RawId Standard Base64 encoded bytes.
 	RawId *StdBase64 `json:"raw_id,omitempty"`
+
+	// RpIdHash Standard Base64 encoded bytes.
+	RpIdHash *StdBase64 `json:"rp_id_hash,omitempty"`
 }
 
 // CredentialName Name of a credential.
@@ -2310,6 +2428,28 @@ type ErrorStatus string
 
 // EthHex ETH chain ID are sometimes sent as numbers, or as strings (sometimes decimal, sometimes hexadecimal with 0x prefix)
 type EthHex = NumberOrString
+
+// Event defines model for Event.
+type Event struct {
+	// Action - `create`: Create resource, client may attempt to select resource ID
+	// - `get`: Specific resource
+	// - `list`: All resources of a resource type, filtered by parent ID if set
+	// - `update`: Modify existing resource (`version` is used engine-side to prevent accidental reversion of concurrent modification attempts)
+	// - `delete`: Delete a resource
+	//
+	// Custom actions are defined by resource type, currently: `CustomUserAction` (`custom/heartbeat`), `CustomFeatureAction` (`custom/activate` and `custom/disable`), and , `CustomTransferRuleAction` (`custom/activate` and `custom/disable`).
+	//
+	// `custom/recheck` added in `25.6.3`.
+	Action      *Action                 `json:"action,omitempty"`
+	BlockHeight *int                    `json:"block_height,omitempty"`
+	HostId      *string                 `json:"host_id,omitempty"`
+	Index       *int                    `json:"index,omitempty"`
+	Initiator   *string                 `json:"initiator,omitempty"`
+	Operation   *OperationName          `json:"operation,omitempty"`
+	Resource    *map[string]interface{} `json:"resource,omitempty"`
+	TreasuryId  *string                 `json:"treasury_id,omitempty"`
+	Type        *ResourceType           `json:"type,omitempty"`
+}
 
 // ExplicitFeePayerPolicy Added in `v25.13.1`.
 //
@@ -2785,12 +2925,7 @@ type NumberOrString0 = float32
 type NumberOrString1 = string
 
 // OneOrMoreAddressNames defines model for OneOrMoreAddressNames.
-type OneOrMoreAddressNames struct {
-	union json.RawMessage
-}
-
-// OneOrMoreAddressNames1 defines model for .
-type OneOrMoreAddressNames1 = []AddressName
+type OneOrMoreAddressNames = FlexibleArray
 
 // Operation defines model for Operation.
 type Operation struct {
@@ -3000,6 +3135,9 @@ type OperationPage struct {
 // **failed**: Terminal state - the operation failed (either challenged, timed out, or creating the resource after authorization failed).
 type OperationState string
 
+// Origin Scheme, host, and port component of a URL
+type Origin = string
+
 // Pagination Standard fields added in response to a `list` or `nested-list` action. The `next_page_token` is set if there is remaining data to be transmitted. This data can be verified by repeating the action, setting query parameter `page_token` to the given (opaque) value.
 type Pagination struct {
 	NextPageToken *string `json:"next_page_token,omitempty"`
@@ -3091,7 +3229,6 @@ type Query = SafeMap
 type QuorumFilter struct {
 	Approvals *int        `json:"approvals,omitempty"`
 	Approve   *UserFilter `json:"approve,omitempty"`
-	Cancel    *UserFilter `json:"cancel,omitempty"`
 	Initiate  *UserFilter `json:"initiate,omitempty"`
 }
 
@@ -4022,13 +4159,11 @@ type StakingData struct {
 // StakingFilter defines model for StakingFilter.
 type StakingFilter struct {
 	// Amount Only one of `at_least`, `more_than` may be set (as lower bound). Only one of `at_most`, `less_than` may be set (as upper bound). Either a lower bound, an upper bound, or a lower and an upper bound must be set. All bounds are in terms of the notional value of the current amount (or including historical amounts) in terms of the `quote` asset.
-	Amount *AmountFilter `json:"amount,omitempty"`
-	Asset  AssetFilter   `json:"asset"`
-	From   AddressFilter `json:"from"`
-
-	// Staking Must have at least one staking variant.
-	Staking FlexibleArray `json:"staking"`
-	To      AddressFilter `json:"to"`
+	Amount  *AmountFilter         `json:"amount,omitempty"`
+	Asset   AssetFilter           `json:"asset"`
+	From    AddressFilter         `json:"from"`
+	Staking *StakingVariantFilter `json:"staking,omitempty"`
+	To      AddressFilter         `json:"to"`
 }
 
 // StakingName defines model for StakingName.
@@ -4049,7 +4184,6 @@ type StakingRule struct {
 	Approvals *int          `json:"approvals,omitempty"`
 	Approve   *UserFilter   `json:"approve,omitempty"`
 	Asset     AssetFilter   `json:"asset"`
-	Cancel    *UserFilter   `json:"cancel,omitempty"`
 
 	// CreateTime Seconds since UNIX epoch, encoded as UTC timestamp (ending in Z).
 	//
@@ -4078,12 +4212,10 @@ type StakingRule struct {
 	// - `description`
 	// - `email`
 	// - `display-name`
-	Notes    *Notes    `json:"notes,omitempty"`
-	Proposal *Proposal `json:"proposal,omitempty"`
-
-	// Staking Must have at least one staking variant.
-	Staking FlexibleArray     `json:"staking"`
-	State   *DisableableState `json:"state,omitempty"`
+	Notes    *Notes                `json:"notes,omitempty"`
+	Proposal *Proposal             `json:"proposal,omitempty"`
+	Staking  *StakingVariantFilter `json:"staking,omitempty"`
+	State    *DisableableState     `json:"state,omitempty"`
 
 	// Tags A set of strings.  Tags be referenced in policy rules, like access-rules, transfer-rules, and staking-rules.
 	//
@@ -4106,17 +4238,14 @@ type StakingRule struct {
 // StakingRuleData defines model for StakingRuleData.
 type StakingRuleData struct {
 	// Amount Only one of `at_least`, `more_than` may be set (as lower bound). Only one of `at_most`, `less_than` may be set (as upper bound). Either a lower bound, an upper bound, or a lower and an upper bound must be set. All bounds are in terms of the notional value of the current amount (or including historical amounts) in terms of the `quote` asset.
-	Amount    *AmountFilter `json:"amount,omitempty"`
-	Approvals *int          `json:"approvals,omitempty"`
-	Approve   *UserFilter   `json:"approve,omitempty"`
-	Asset     AssetFilter   `json:"asset"`
-	Cancel    *UserFilter   `json:"cancel,omitempty"`
-	From      AddressFilter `json:"from"`
-	Initiate  *UserFilter   `json:"initiate,omitempty"`
-
-	// Staking Must have at least one staking variant.
-	Staking FlexibleArray `json:"staking"`
-	To      AddressFilter `json:"to"`
+	Amount    *AmountFilter         `json:"amount,omitempty"`
+	Approvals *int                  `json:"approvals,omitempty"`
+	Approve   *UserFilter           `json:"approve,omitempty"`
+	Asset     AssetFilter           `json:"asset"`
+	From      AddressFilter         `json:"from"`
+	Initiate  *UserFilter           `json:"initiate,omitempty"`
+	Staking   *StakingVariantFilter `json:"staking,omitempty"`
+	To        AddressFilter         `json:"to"`
 }
 
 // StakingRuleName defines model for StakingRuleName.
@@ -4132,6 +4261,9 @@ type StakingRulePage struct {
 
 // StakingVariant Staking operations.  Not all chains use `withdraw`, as it's done automatically in `unstake` transactions.
 type StakingVariant string
+
+// StakingVariantFilter defines model for StakingVariantFilter.
+type StakingVariantFilter = FlexibleArray
 
 // StdBase64 Standard Base64 encoded bytes.
 type StdBase64 = string
@@ -4257,6 +4389,9 @@ type Tag struct {
 	Version *ResourceVersion `json:"version,omitempty"`
 }
 
+// TagCombination One or more tag names, separated by " AND ". Filters and call/staking/transfer rules involving such an entry match if the given address is tagged with all listed tags. The special case of a single tag name is the most used.
+type TagCombination = string
+
 // TagData defines model for TagData.
 type TagData struct {
 	Color    *string             `json:"color,omitempty"`
@@ -4314,11 +4449,15 @@ type Transaction struct {
 
 	// Fees Any fees paid.  This will be updated only after the transaction is accepted on the public chain.
 	Fees *[]AssetAndSymbolAndAmount `json:"fees,omitempty"`
+	From OneOrMoreAddressNames      `json:"from"`
 
 	// Hash Transaction hash.
 	// It is encoded in the canonical way for the chain.
 	// This value can be used to look up the transaction on external explorers.
 	Hash *string `json:"hash,omitempty"`
+
+	// Indexed Indicate if this is indexed on Oracle API or not.
+	Indexed *bool `json:"indexed,omitempty"`
 
 	// Input The chain-specific inputs used for serialization.
 	// This is a JSON serialized object.
@@ -4411,11 +4550,15 @@ type TransactionData struct {
 
 	// Fees Any fees paid.  This will be updated only after the transaction is accepted on the public chain.
 	Fees *[]AssetAndSymbolAndAmount `json:"fees,omitempty"`
+	From OneOrMoreAddressNames      `json:"from"`
 
 	// Hash Transaction hash.
 	// It is encoded in the canonical way for the chain.
 	// This value can be used to look up the transaction on external explorers.
 	Hash *string `json:"hash,omitempty"`
+
+	// Indexed Indicate if this is indexed on Oracle API or not.
+	Indexed *bool `json:"indexed,omitempty"`
 
 	// Input The chain-specific inputs used for serialization.
 	// This is a JSON serialized object.
@@ -4550,7 +4693,10 @@ type Transfer struct {
 	UpdateTime *Timestamp `json:"update_time,omitempty"`
 
 	// Updater The resource name for a user.
-	Updater *UserName        `json:"updater,omitempty"`
+	Updater *UserName `json:"updater,omitempty"`
+
+	// Variant `internal` if `to` is an internal or shared address, `external` if it is an external address
+	Variant *TransferVariant `json:"variant,omitempty"`
 	Version *ResourceVersion `json:"version,omitempty"`
 }
 
@@ -4733,10 +4879,11 @@ type TransferData_To struct {
 // TransferFilter defines model for TransferFilter.
 type TransferFilter struct {
 	// Amount Only one of `at_least`, `more_than` may be set (as lower bound). Only one of `at_most`, `less_than` may be set (as upper bound). Either a lower bound, an upper bound, or a lower and an upper bound must be set. All bounds are in terms of the notional value of the current amount (or including historical amounts) in terms of the `quote` asset.
-	Amount *AmountFilter `json:"amount,omitempty"`
-	Asset  AssetFilter   `json:"asset"`
-	From   AddressFilter `json:"from"`
-	To     AddressFilter `json:"to"`
+	Amount   *AmountFilter          `json:"amount,omitempty"`
+	Asset    AssetFilter            `json:"asset"`
+	From     AddressFilter          `json:"from"`
+	To       AddressFilter          `json:"to"`
+	Transfer *TransferVariantFilter `json:"transfer,omitempty"`
 }
 
 // TransferName defines model for TransferName.
@@ -4770,7 +4917,6 @@ type TransferRule struct {
 	Approvals *int          `json:"approvals,omitempty"`
 	Approve   *UserFilter   `json:"approve,omitempty"`
 	Asset     AssetFilter   `json:"asset"`
-	Cancel    *UserFilter   `json:"cancel,omitempty"`
 
 	// CreateTime Seconds since UNIX epoch, encoded as UTC timestamp (ending in Z).
 	//
@@ -4806,8 +4952,9 @@ type TransferRule struct {
 	// Tags A set of strings.  Tags be referenced in policy rules, like access-rules, transfer-rules, and staking-rules.
 	//
 	// Added in `25.13.1`.
-	Tags *Tags         `json:"tags,omitempty"`
-	To   AddressFilter `json:"to"`
+	Tags     *Tags                  `json:"tags,omitempty"`
+	To       AddressFilter          `json:"to"`
+	Transfer *TransferVariantFilter `json:"transfer,omitempty"`
 
 	// UpdateTime Seconds since UNIX epoch, encoded as UTC timestamp (ending in Z).
 	//
@@ -4824,14 +4971,14 @@ type TransferRule struct {
 // TransferRuleData defines model for TransferRuleData.
 type TransferRuleData struct {
 	// Amount Only one of `at_least`, `more_than` may be set (as lower bound). Only one of `at_most`, `less_than` may be set (as upper bound). Either a lower bound, an upper bound, or a lower and an upper bound must be set. All bounds are in terms of the notional value of the current amount (or including historical amounts) in terms of the `quote` asset.
-	Amount    *AmountFilter `json:"amount,omitempty"`
-	Approvals *int          `json:"approvals,omitempty"`
-	Approve   *UserFilter   `json:"approve,omitempty"`
-	Asset     AssetFilter   `json:"asset"`
-	Cancel    *UserFilter   `json:"cancel,omitempty"`
-	From      AddressFilter `json:"from"`
-	Initiate  *UserFilter   `json:"initiate,omitempty"`
-	To        AddressFilter `json:"to"`
+	Amount    *AmountFilter          `json:"amount,omitempty"`
+	Approvals *int                   `json:"approvals,omitempty"`
+	Approve   *UserFilter            `json:"approve,omitempty"`
+	Asset     AssetFilter            `json:"asset"`
+	From      AddressFilter          `json:"from"`
+	Initiate  *UserFilter            `json:"initiate,omitempty"`
+	To        AddressFilter          `json:"to"`
+	Transfer  *TransferVariantFilter `json:"transfer,omitempty"`
 }
 
 // TransferRuleEvaluation defines model for TransferRuleEvaluation.
@@ -4865,6 +5012,12 @@ type TransferRulePage struct {
 // - **failed**: This transfer failed, and nothing can be done to make further progress
 // - **reverted**:  The transfer landed on chain but reverted due to an error.
 type TransferState string
+
+// TransferVariant `internal` if `to` is an internal or shared address, `external` if it is an external address
+type TransferVariant string
+
+// TransferVariantFilter defines model for TransferVariantFilter.
+type TransferVariantFilter = FlexibleArray
 
 // Treasury defines model for Treasury.
 type Treasury struct {
@@ -4935,6 +5088,7 @@ type Treasury struct {
 
 	// Updater The resource name for a user.
 	Updater *UserName        `json:"updater,omitempty"`
+	Usage   *Usage           `json:"usage,omitempty"`
 	Version *ResourceVersion `json:"version,omitempty"`
 }
 
@@ -4962,6 +5116,7 @@ type TreasuryData struct {
 
 	// SsoCreatedUserInitialRoles This is currently unused in production environments.
 	SsoCreatedUserInitialRoles *[]string `json:"sso_created_user_initial_roles,omitempty"`
+	Usage                      *Usage    `json:"usage,omitempty"`
 }
 
 // TreasuryName defines model for TreasuryName.
@@ -4977,61 +5132,20 @@ type TreasuryPage struct {
 
 // Type defines model for Type.
 type Type struct {
-	// CreateTime Seconds since UNIX epoch, encoded as UTC timestamp (ending in Z).
-	//
-	// All resources have a `create_time` timestamp, which is set to the engine block time where the resource
-	// is created in replicated engine state.
-	CreateTime *Timestamp `json:"create_time,omitempty"`
-
-	// Creator The resource name for a user.
-	Creator *UserName `json:"creator,omitempty"`
-
-	// Description Added in `25.12.1`.  A searchable description for the resource.
-	Description *string `json:"description,omitempty"`
-
-	// Labels Similar to "labels" in Kubernetes, stores "identifying data" of a resource. Values are strings, or null (for "tags"). It is recommended to namespace using a domain.
-	//
-	// Standard labels:
-	// - `creator`
-	// - `sso`
-	Labels *Labels   `json:"labels,omitempty"`
 	Name   *TypeName `json:"name,omitempty"`
 	Nested *TypeName `json:"nested,omitempty"`
 
-	// Notes Similar to "annotations" in Kubernetes, stores "non-identifying data" ofa resource. Values are strings. It is recommended to namespace using a domain.
-	// Standard labels:
-	// - `description`
-	// - `email`
-	// - `display-name`
-	Notes *Notes `json:"notes,omitempty"`
-
 	// Plural Alphanumeric, underscores, and dashes.
-	Plural   *Id       `json:"plural,omitempty"`
-	Proposal *Proposal `json:"proposal,omitempty"`
+	Plural *Id `json:"plural,omitempty"`
 
 	// Singular Alphanumeric, underscores, and dashes.
 	Singular *Id `json:"singular,omitempty"`
 
-	// State Active / deleted state for resources that don't have a more specific state machine.
-	State *BasicState `json:"state,omitempty"`
-
-	// Tags A set of strings.  Tags be referenced in policy rules, like access-rules, transfer-rules, and staking-rules.
-	//
-	// Added in `25.13.1`.
-	Tags *Tags `json:"tags,omitempty"`
-
-	// UpdateTime Seconds since UNIX epoch, encoded as UTC timestamp (ending in Z).
-	//
-	// All resources have a `create_time` timestamp, which is set to the engine block time where the resource
-	// is created in replicated engine state.
-	UpdateTime *Timestamp `json:"update_time,omitempty"`
-
-	// Updater The resource name for a user.
-	Updater *UserName `json:"updater,omitempty"`
+	// States All valid states of a resource.  Added in `26.15.6`.
+	States *[]string `json:"states,omitempty"`
 
 	// Variants All valid variants of the resource - if it has variants.
-	Variants *[]string        `json:"variants,omitempty"`
-	Version  *ResourceVersion `json:"version,omitempty"`
+	Variants *[]string `json:"variants,omitempty"`
 }
 
 // TypeData Information allowing a client to programmatically generate itself.
@@ -5043,6 +5157,9 @@ type TypeData struct {
 
 	// Singular Alphanumeric, underscores, and dashes.
 	Singular *Id `json:"singular,omitempty"`
+
+	// States All valid states of a resource.  Added in `26.15.6`.
+	States *[]string `json:"states,omitempty"`
 
 	// Variants All valid variants of the resource - if it has variants.
 	Variants *[]string `json:"variants,omitempty"`
@@ -5085,6 +5202,26 @@ type UnsignedMessage struct {
 type UnsignedSvmTransaction struct {
 	// Transaction Hex-encoded bytes
 	Transaction Hex `json:"transaction"`
+}
+
+// Usage defines model for Usage.
+type Usage struct {
+	Addresses *struct {
+		Contract  int `json:"contract"`
+		External  int `json:"external"`
+		Internal  int `json:"internal"`
+		Validator int `json:"validator"`
+	} `json:"addresses,omitempty"`
+	Keys *struct {
+		Internal int `json:"internal"`
+		Shared   int `json:"shared"`
+		User     int `json:"user"`
+	} `json:"keys,omitempty"`
+	Signatures int `json:"signatures"`
+	Users      *struct {
+		Human   int `json:"human"`
+		Machine int `json:"machine"`
+	} `json:"users,omitempty"`
 }
 
 // User defines model for User.
@@ -5325,6 +5462,12 @@ type ListChainAddressesParams struct {
 
 	// PageNumber Retrieves the Nth page of data.
 	PageNumber *PageNumber `form:"page_number,omitempty" json:"page_number,omitempty"`
+}
+
+// ListAddressTransactionsParams defines parameters for ListAddressTransactions.
+type ListAddressTransactionsParams struct {
+	// Filter A filter to apply before filling out the page (https://docs.cordialsystems.com/reference/filtering).
+	Filter *Filter `form:"filter,omitempty" json:"filter,omitempty"`
 }
 
 // ListChainAssetsParams defines parameters for ListChainAssets.
@@ -6035,6 +6178,32 @@ func (t *AddressFilterEntry) FromAccountDefaults(v AccountDefaults) error {
 
 // MergeAccountDefaults performs a merge with any union data inside the AddressFilterEntry, using the provided AccountDefaults
 func (t *AddressFilterEntry) MergeAccountDefaults(v AccountDefaults) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsTagCombination returns the union data inside the AddressFilterEntry as a TagCombination
+func (t AddressFilterEntry) AsTagCombination() (TagCombination, error) {
+	var body TagCombination
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTagCombination overwrites any union data inside the AddressFilterEntry as the provided TagCombination
+func (t *AddressFilterEntry) FromTagCombination(v TagCombination) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeTagCombination performs a merge with any union data inside the AddressFilterEntry, using the provided TagCombination
+func (t *AddressFilterEntry) MergeTagCombination(v TagCombination) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -6827,68 +6996,6 @@ func (t NumberOrString) MarshalJSON() ([]byte, error) {
 }
 
 func (t *NumberOrString) UnmarshalJSON(b []byte) error {
-	err := t.union.UnmarshalJSON(b)
-	return err
-}
-
-// AsAddressName returns the union data inside the OneOrMoreAddressNames as a AddressName
-func (t OneOrMoreAddressNames) AsAddressName() (AddressName, error) {
-	var body AddressName
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromAddressName overwrites any union data inside the OneOrMoreAddressNames as the provided AddressName
-func (t *OneOrMoreAddressNames) FromAddressName(v AddressName) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeAddressName performs a merge with any union data inside the OneOrMoreAddressNames, using the provided AddressName
-func (t *OneOrMoreAddressNames) MergeAddressName(v AddressName) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsOneOrMoreAddressNames1 returns the union data inside the OneOrMoreAddressNames as a OneOrMoreAddressNames1
-func (t OneOrMoreAddressNames) AsOneOrMoreAddressNames1() (OneOrMoreAddressNames1, error) {
-	var body OneOrMoreAddressNames1
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromOneOrMoreAddressNames1 overwrites any union data inside the OneOrMoreAddressNames as the provided OneOrMoreAddressNames1
-func (t *OneOrMoreAddressNames) FromOneOrMoreAddressNames1(v OneOrMoreAddressNames1) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeOneOrMoreAddressNames1 performs a merge with any union data inside the OneOrMoreAddressNames, using the provided OneOrMoreAddressNames1
-func (t *OneOrMoreAddressNames) MergeOneOrMoreAddressNames1(v OneOrMoreAddressNames1) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-func (t OneOrMoreAddressNames) MarshalJSON() ([]byte, error) {
-	b, err := t.union.MarshalJSON()
-	return b, err
-}
-
-func (t *OneOrMoreAddressNames) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }

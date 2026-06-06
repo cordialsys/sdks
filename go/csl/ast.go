@@ -408,17 +408,19 @@ type Blueprint struct {
 
 func (Blueprint) commandType() string { return "Blueprint" }
 
-// DownloadTreasury represents "download treasury <id> [<directory>]".
+// DownloadTreasury represents "download [host] treasury <id> [<directory>]".
 type DownloadTreasury struct {
 	TreasuryId string
 	Directory  *string
+	Host       bool
 }
 
 func (DownloadTreasury) commandType() string { return "DownloadTreasury" }
 
-// UploadBackup represents "upload backup <file>".
+// UploadBackup represents "upload [host] backup <file>".
 type UploadBackup struct {
 	File string
+	Host bool
 }
 
 func (UploadBackup) commandType() string { return "UploadBackup" }

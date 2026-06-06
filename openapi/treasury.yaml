@@ -6,7 +6,7 @@ info:
   description: |-
     The Cordial Treasury programmatic API offers a resource-oriented REST API.
 
-    Each resource (such as `Account`, `Address`, `Transfer`, `User`) has CRUD endpoints exposed. 
+    Each resource (such as `Account`, `Address`, `Transfer`, `User`) has CRUD endpoints exposed.
 
     Top-level resources have a
     - type `Resource` (singular)
@@ -62,18 +62,11 @@ paths:
       summary: List Accounts
       operationId: list-accounts
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -98,11 +91,7 @@ paths:
               $ref: '#/components/schemas/Account'
       responses:
         '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OperationName'
+          $ref: '#/components/responses/OperationNameJson'
       servers:
         - url: 'https://treasury.cordialapis.com/v1'
           description: Production
@@ -220,6 +209,35 @@ paths:
           description: Production
         - url: 'http://localhost:8777/v1'
           description: Development (port TRSR)
+  '/accounts/{account}/fee-payer':
+    post:
+      tags:
+        - Account
+      summary: Update fee pay Policy
+      operationId: fee-payer-account
+      parameters:
+        - name: account
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExplicitFeePayerPolicy'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
   /addresses:
     get:
       tags:
@@ -228,16 +246,33 @@ paths:
       description: ''
       operationId: list-addresses
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressPage'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  '/accounts/{account}/addresses':
+    get:
+      tags:
+        - Address
+      summary: List Account Addresses
+      operationId: get-account-addresses
+      parameters:
+        - name: account
+          in: path
+          required: true
           schema:
             type: string
       responses:
@@ -377,6 +412,40 @@ paths:
           description: Production
         - url: 'http://localhost:8777/v1'
           description: Development (port TRSR)
+  '/chains/{chain}/addresses/{address}/fee-payer':
+    post:
+      tags:
+        - Address
+      summary: Update fee pay Policy
+      operationId: fee-payer-address
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExplicitFeePayerPolicy'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
   /assets:
     get:
       tags:
@@ -384,18 +453,11 @@ paths:
       summary: List Assets
       operationId: list-assets
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -542,18 +604,11 @@ paths:
       description: ''
       operationId: list-chains
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -677,23 +732,11 @@ paths:
       description: ''
       operationId: list-credentials
       parameters:
-        - name: pubkey
-          in: query
-          description: 'Public key to filter by.  Must be hex or base64-url-raw encoded.  If the public key is not found, this will return an error.'
-          schema:
-            type: string
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -842,18 +885,11 @@ paths:
       description: ''
       operationId: list-operations
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -898,18 +934,11 @@ paths:
       description: ''
       operationId: list-transfers
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -931,7 +960,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Transfer'
+              $ref: '#/components/schemas/TransferCreate'
       responses:
         '200':
           description: OK
@@ -981,18 +1010,11 @@ paths:
       description: ''
       operationId: list-stakings
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       requestBody:
         content: {}
       responses:
@@ -1124,7 +1146,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Transfer'
+              $ref: '#/components/schemas/TransferCreate'
       responses:
         '200':
           description: OK
@@ -1175,18 +1197,11 @@ paths:
       summary: List Users
       operationId: list-users
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -1347,18 +1362,11 @@ paths:
       description: ''
       operationId: list-chain-assets
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
         - name: chain
           in: path
           required: true
@@ -1383,14 +1391,11 @@ paths:
       summary: List Roles
       operationId: list-roles
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -1491,10 +1496,11 @@ paths:
       description: Lists all credentials of a given user.
       operationId: list-user-credentials
       parameters:
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
         - name: user
           in: path
           required: true
@@ -1506,7 +1512,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserPage'
+                $ref: '#/components/schemas/CredentialPage'
       servers:
         - url: 'https://treasury.cordialapis.com/v1'
           description: Production
@@ -1551,18 +1557,11 @@ paths:
       summary: List Chain Addresses
       operationId: list-chain-addresses
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
         - name: chain
           in: path
           required: true
@@ -1856,18 +1855,11 @@ paths:
       description: 'Lists all transfer rules, which comprise the current transfer policy.'
       operationId: list-transfer-rules
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       requestBody:
         content: {}
       responses:
@@ -1956,9 +1948,9 @@ paths:
     post:
       tags:
         - Transfer Policy
-      summary: Import Transfer Rule
+      summary: Create Named Transfer Rule
       description: Importing is the same as creating but the user specifies the resource ID in the URL.
-      operationId: import-transfer-rule
+      operationId: create-named-transfer-rule
       parameters:
         - name: transfer-rule
           in: path
@@ -2017,10 +2009,11 @@ paths:
       summary: List Resource Types
       operationId: list-types
       parameters:
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -2076,12 +2069,38 @@ paths:
           description: Production
         - url: 'http://localhost:8777/v1'
           description: Development (port TRSR)
+    post:
+      tags:
+        - Treasury
+      summary: Update Treasury
+      description: Added in `25.2.2`
+      operationId: update-treasury-singleton
+      requestBody:
+        description: ''
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Treasury'
+      responses:
+        '200':
+          $ref: '#/components/responses/OperationNameJson'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
   /treasuries:
     get:
       tags:
         - Treasury
       summary: List Treasuries
       operationId: list-treasuries
+      parameters:
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -2118,6 +2137,31 @@ paths:
           description: Production
         - url: 'http://localhost:8777/v1'
           description: Development (port TRSR)
+    post:
+      tags:
+        - Treasury
+      summary: Update Treasury
+      description: Added in `25.2.2`
+      operationId: update-treasury
+      parameters:
+        - name: treasury
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Treasury'
+      responses:
+        '200':
+          $ref: '#/components/responses/OperationNameJson'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
   /keys:
     get:
       tags:
@@ -2125,18 +2169,11 @@ paths:
       summary: List Keys
       operationId: list-keys
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -2263,18 +2300,11 @@ paths:
       summary: List Signatures
       operationId: list-signatures
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -2336,7 +2366,38 @@ paths:
         - url: 'http://localhost:8777/v1'
           description: Development (port TRSR)
       x-internal: false
+    put:
+      tags:
+        - Signature
+      summary: Update Signature
+      operationId: update-signature
+      parameters:
+        - name: signature
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Signature'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+      x-internal: false
     post:
+      tags:
+        - Signature
       summary: Create Named Signature
       operationId: create-named-signature
       parameters:
@@ -2369,10 +2430,11 @@ paths:
       summary: List Key Requests
       operationId: list-key-requests
       parameters:
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -2392,10 +2454,11 @@ paths:
       summary: List Signature Requests
       operationId: list-signature-requests
       parameters:
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -2463,18 +2526,11 @@ paths:
       summary: List Transactions
       operationId: list-transactions
       parameters:
-        - name: page_size
-          in: query
-          schema:
-            type: integer
-        - name: page_token
-          in: query
-          schema:
-            type: string
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -2511,6 +2567,33 @@ paths:
           description: Production
         - url: 'http://localhost:8777/v1'
           description: Development (port TRSR)
+  '/transactions/{transaction}/recheck':
+    post:
+      tags:
+        - Transaction
+      summary: Recheck transaction
+      description: 'Changes a transaction to be back in `finalizing` state, forcing it to be re-observed on chain.'
+      operationId: recheck-transaction
+      parameters:
+        - name: transaction
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content: {}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
   /software-updates:
     get:
       tags:
@@ -2518,10 +2601,11 @@ paths:
       summary: List Software Updates
       operationId: list-software-updates
       parameters:
-        - name: filter
-          in: query
-          schema:
-            type: string
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -2662,6 +2746,12 @@ paths:
         - Signer
       summary: List Signers
       operationId: list-signers
+      parameters:
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -2806,6 +2896,12 @@ paths:
       summary: List Symbols
       description: ''
       operationId: list-symbols
+      parameters:
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
       responses:
         '200':
           description: OK
@@ -2825,6 +2921,11 @@ paths:
       summary: List Transfer Transactions
       operationId: list-transfer-transactions
       parameters:
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
         - name: transfer
           in: path
           required: true
@@ -2865,7 +2966,13 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/KeyResponse'
-      responses: {}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
       servers:
         - url: 'https://treasury.cordialapis.com/v1'
           description: Production
@@ -2922,7 +3029,13 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/SignatureResponse'
-      responses: {}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
       servers:
         - url: 'https://treasury.cordialapis.com/v1'
           description: Production
@@ -2963,6 +3076,11 @@ paths:
       summary: List Key Responses
       operationId: list-key-responses
       parameters:
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
         - name: signer
           in: path
           required: true
@@ -2987,6 +3105,11 @@ paths:
       summary: List Signature Responses
       operationId: list-signature-responses
       parameters:
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
         - name: signer
           in: path
           required: true
@@ -3001,6 +3124,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SignatureResponsePage'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  '/users/{user}/approvables':
+    get:
+      tags:
+        - Operation
+      summary: List approvable operations
+      description: Show operations that can currently be approved by the user.  Added in `25.15.4`.
+      operationId: list-approvable-operations
+      parameters:
+        - name: user
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationPage'
       servers:
         - url: 'https://treasury.cordialapis.com/v1'
           description: Production
@@ -3022,7 +3170,13 @@ paths:
           required: true
           schema:
             type: string
-      responses: {}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
       servers:
         - url: 'https://treasury.cordialapis.com/v1'
           description: Production
@@ -3231,6 +3385,25 @@ paths:
           description: Production
         - url: 'http://localhost:8777/v1'
           description: Development (port TRSR)
+  /assets/price:
+    post:
+      tags:
+        - Asset
+      summary: Set Prices
+      operationId: set-prices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Prices'
+      responses:
+        '200':
+          $ref: '#/components/responses/OperationNameJson'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
   '/stakings/{staking}':
     get:
       tags:
@@ -3270,7 +3443,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Staking'
+              $ref: '#/components/schemas/StakingCreate'
       responses:
         '200':
           description: OK
@@ -3291,18 +3464,75 @@ paths:
       description: |-
         This is a websocket, which sends newline-delimited JSON events for each change of the engine state.
 
-        Example:
+        Examples of an event:
+
+
+        ```json event title=Create User
+        {
+          "height": 176,
+          "time": "2024-06-05T22:55:43Z",
+          "action": "create",
+          "type": "User",
+          "resource": {
+            "create_time": "2024-06-05T22:55:43Z",
+            "name": "users/machine",
+            "roles": [],
+            "update_time": "2024-06-05T22:55:43Z",
+            "variant": "machine",
+            "version": 1
+          }
+        }
         ```
-        {"height":172,"time":"2024-06-05T22:55:33Z","action":"create","type":"Operation","resource":{"approve":[],"cancel":[],"create_time":"2024-06-05T22:55:33Z","initiator":"users/signer-1","name":"operations/4DF5FA45288492B7C74E4093365D0197A5EDBC25FA46CE32F06BF788B3DC3470","request":{"action":"create","api":1,"body":"{\"active_time\":\"1970-01-01T00:00:00Z\"}","create_time":1717628133,"extension":"","id":"","nonce":6480961236271,"operation":"","parent":"signer-1","public_key":"03410ef7bd3e2e78f18fbd858eb497911849ee91b87cd72b483f3a7fea1f5d1790","query":{},"resource":"Heartbeat","signature":"f99f0c3d5404af813f4e557c57704bd6bfd4cea77ca6c630ddd28844b4bc4ce3333402ebfac153f8f0d2c32aa1c68faeac553125aa12cfb47e786273080bf088","treasury":"Qj3uUa7fhAcrDsFWwRSzVN","vote":""},"state":"authorizing","update_time":"2024-06-05T22:55:33Z","version":1}}
-        {"height":172,"time":"2024-06-05T22:55:33Z","action":"create","type":"Heartbeat","resource":{"name":"users/signer-1/heartbeats/1","active_time":"2024-06-05T22:54:23Z"}}
-        {"height":176,"time":"2024-06-05T22:55:43Z","action":"create","type":"Operation","resource":{"approve":[],"cancel":[],"create_time":"2024-06-05T22:55:43Z","initiator":"users/root","name":"operations/993BCF0645B804B982D8559BFD81D1E076FF7DE3B49CEDFC3F816561E375E24F","request":{"action":"create","api":1,"body":"{\"variant\":\"machine\"}","create_time":1717628143,"extension":"","id":"machine","nonce":9006573486740,"operation":"","parent":"","public_key":"029098db8de1073bd53d537628acf4d811cf798feea7e0205c6304ad6c63cfaf77","query":{},"resource":"User","signature":"f8654cebf89a3199b35e5688d219ac832678ce64604b73f817168bb0fed089e22e4c344d45a8137cd5e0eeef0c83aeccedb9917d0aa1b397d057d46e9b708018","treasury":"Qj3uUa7fhAcrDsFWwRSzVN","vote":""},"state":"authorizing","update_time":"2024-06-05T22:55:43Z","version":1}}
-        {"height":176,"time":"2024-06-05T22:55:43Z","action":"create","type":"User","resource":{"create_time":"2024-06-05T22:55:43Z","name":"users/machine","roles":[],"update_time":"2024-06-05T22:55:43Z","variant":"machine","version":1}}
+
+
+
+        ```json  title=Operation
+        {
+          "height": 172,
+          "time": "2024-06-05T22:55:33Z",
+          "action": "create",
+          "type": "Operation",
+          "resource": {
+            "approve": [],
+            "cancel": [],
+            "create_time": "2024-06-05T22:55:33Z",
+            "initiator": "users/signer-1",
+            "name": "operations/4DF5FA45288492B7C74E4093365D0197A5EDBC25FA46CE32F06BF788B3DC3470",
+            "request": {
+              "action": "create",
+              "api": 1,
+              "body": "{\"active_time\":\"1970-01-01T00:00:00Z\"}",
+              "create_time": 1717628133,
+              "extension": "",
+              "id": "",
+              "nonce": 6480961236271,
+              "operation": "",
+              "parent": "signer-1",
+              "public_key": "03410ef7bd3e2e78f18fbd858eb497911849ee91b87cd72b483f3a7fea1f5d1790",
+              "query": {},
+              "resource": "Heartbeat",
+              "signature": "f99f0c3d5404af813f4e557c57704bd6bfd4cea77ca6c630ddd28844b4bc4ce3333402ebfac153f8f0d2c32aa1c68faeac553125aa12cfb47e786273080bf088",
+              "treasury": "Qj3uUa7fhAcrDsFWwRSzVN",
+              "vote": ""
+            },
+            "state": "authorizing",
+            "update_time": "2024-06-05T22:55:33Z",
+            "version": 1
+          }
+        }
         ```
+
 
         Entries for `type` not `Operation` correspond to changes in resources.
         Entries for `type` `Operation` allow tracking requests.
       operationId: ws-events
-      responses: {}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
       servers:
         - url: 'https://treasury.cordialapis.com/v1'
           description: Production
@@ -3387,6 +3617,970 @@ paths:
           description: Production
         - url: 'http://localhost:8777/v1'
           description: Development (port TRSR)
+  '/signatories/{signatory}':
+    get:
+      tags:
+        - Signatory
+      summary: Get Signatory
+      operationId: get-signatory
+      parameters:
+        - name: signatory
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Signatory'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+      x-internal: false
+    post:
+      tags:
+        - Signatory
+      summary: Create named Signatory
+      operationId: create-named-signatory
+      parameters:
+        - name: signatory
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Signatory'
+      responses:
+        '200':
+          $ref: '#/components/responses/OperationNameJson'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+      x-internal: false
+    put:
+      tags:
+        - Signatory
+      summary: Update Signatory
+      operationId: update-signatory
+      parameters:
+        - name: signatory
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Signatory'
+      responses:
+        '200':
+          $ref: '#/components/responses/OperationNameJson'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+      x-internal: false
+    delete:
+      tags:
+        - Signatory
+      summary: Delete Signatory
+      operationId: delete-signatory
+      parameters:
+        - name: signatory
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          $ref: '#/components/responses/OperationNameJson'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+      x-internal: false
+  /signatories:
+    get:
+      tags:
+        - Signatory
+      summary: List Signatories
+      operationId: list-signatories
+      parameters:
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
+      requestBody:
+        content: {}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignatoryPage'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+      x-internal: false
+  /ref/certificate:
+    get:
+      tags:
+        - Ref
+      summary: Reference Certificate
+      operationId: get-ref-certificate
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateClaims'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  /staking-rules:
+    get:
+      tags:
+        - Staking Policy
+      summary: List Staking Rules
+      description: 'Lists all staking rules, which comprise the current staking policy.'
+      operationId: list-staking-rules
+      parameters:
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/page_token'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/output'
+        - $ref: '#/components/parameters/page_number'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StakingRulePage'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+    post:
+      tags:
+        - Staking Policy
+      summary: Create Staking Rule
+      operationId: create-staking-rule
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StakingRule'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  '/staking-rules/{staking-rule}':
+    get:
+      tags:
+        - Staking Policy
+      summary: Get Staking Rule
+      operationId: get-staking-rule
+      parameters:
+        - name: staking-rule
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StakingRule'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+    delete:
+      tags:
+        - Staking Policy
+      summary: Delete Staking Rule
+      operationId: delete-staking-rule
+      parameters:
+        - name: staking-rule
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+    post:
+      tags:
+        - Staking Policy
+      summary: Create Named Transfer Rule
+      description: Creating named is the same as creating but the user specifies the resource ID in the URL.
+      operationId: create-named-staking-rule
+      parameters:
+        - name: staking-rule
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StakingRule'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+    put:
+      tags:
+        - Staking Policy
+      summary: Update Staking Rule
+      operationId: update-staking-rule
+      parameters:
+        - name: staking-rule
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StakingRule'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  '/staking-rules/{staking-rule}/activate':
+    post:
+      tags:
+        - Staking Policy
+      summary: Activate Staking Rule
+      description: |-
+        Custom method.
+        Sets `state` of `StakingRule` to `active`, if it was `disabled`.
+        Body is empty.
+      operationId: activate-staking-rule
+      parameters:
+        - name: staking-rule
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OperationNameJson'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  '/staking-rules/{staking-rule}/disable':
+    post:
+      tags:
+        - Staking Policy
+      summary: Disable Staking Rule
+      description: |-
+        Custom method.
+        Sets `state` of `StakingRule` to `disabled`, if it was `active`.
+        Body is empty.
+      operationId: disable-staking-rule
+      parameters:
+        - name: staking-rule
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OperationNameJson'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  /tags:
+    get:
+      tags:
+        - Tag
+      summary: List Tags
+      operationId: list-tags
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagPage'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  '/tags/{tag}':
+    get:
+      tags:
+        - Tag
+      summary: Get Tag
+      operationId: get-tag
+      parameters:
+        - name: tag
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+    put:
+      tags:
+        - Tag
+      summary: Update Tag
+      operationId: update-tag
+      parameters:
+        - name: tag
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Tag'
+      responses:
+        '200':
+          $ref: '#/components/responses/OperationNameJson'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+    post:
+      tags:
+        - Tag
+      summary: Create Tag
+      description: |-
+        A tag does not need to be created explicitly using this endpoint.
+        A tag may be created indirectly by updating any other resource with a tag.
+        This indirect route of creating a tag will require permission `tag`  for the specific resource.
+      operationId: create-tag
+      parameters:
+        - name: tag
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Tag'
+      responses:
+        '200':
+          $ref: '#/components/responses/OperationNameJson'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+    delete:
+      tags:
+        - Tag
+      summary: Delete Tag
+      operationId: delete-tag
+      parameters:
+        - name: tag
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          $ref: '#/components/responses/OperationNameJson'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  /calls:
+    get:
+      tags:
+        - Call
+      summary: List Calls
+      description: List all Calls.
+      operationId: list-calls
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallPage'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+      x-internal: false
+  '/chains/{chain}/calls':
+    get:
+      tags:
+        - Call
+      summary: List Calls for Chain
+      operationId: list-chain-calls
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallPage'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+      x-internal: false
+  '/chains/{chain}/calls/{call}':
+    get:
+      tags:
+        - Call
+      summary: Get Call
+      operationId: get-call
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: call
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Call'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+      x-internal: false
+    delete:
+      tags:
+        - Call
+      summary: Delete Call
+      operationId: delete-call
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: call
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        2XX:
+          description: 'The name of the operation created, which can be queried for.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+      x-internal: false
+    post:
+      tags:
+        - Call
+      summary: Create Call
+      operationId: create-call
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: call
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Call'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+      x-internal: false
+  '/propose/chains/{chain}/calls':
+    get:
+      tags:
+        - Call
+      summary: List Call Proposals
+      operationId: list-call-proposals
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallPage'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+    post:
+      tags:
+        - Call
+      summary: Propose Call
+      operationId: propose-call
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Call'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+    delete:
+      tags:
+        - Call
+      summary: Delete Call Proposal
+      operationId: delete-call-proposal
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  '/propose/chains/{chain}/calls/{call}':
+    get:
+      tags:
+        - Call
+      summary: Get Call Proposal
+      operationId: get-call-proposal
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: call
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Call'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  '/propose/chains/{chain}/calls/{call}/request':
+    get:
+      tags:
+        - Call
+      summary: Get Call Proposal Request
+      operationId: get-call-proposal-request
+      parameters:
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: call
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  /host/hosts:
+    get:
+      tags:
+        - Host
+      summary: List Hosts
+      operationId: list-hosts
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HostPage'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  /call-rules:
+    get:
+      tags:
+        - Call Policy
+      summary: List Call Rules
+      operationId: list-call-rules
+      responses:
+        2XX:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallRulePage'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+    post:
+      tags:
+        - Call Policy
+      summary: Create Call Rule
+      operationId: create-call-rule
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CallRule'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  '/call-rules/{call-rule}':
+    get:
+      tags:
+        - Call Policy
+      summary: Get Call Rule
+      operationId: get-call-rule
+      parameters:
+        - name: call-rule
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallRule'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+    delete:
+      tags:
+        - Call Policy
+      summary: Delete Call Rule
+      operationId: delete-call-rule
+      parameters:
+        - name: call-rule
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+    post:
+      tags:
+        - Call Policy
+      summary: Create Named Call Rule
+      operationId: create-named-call-rule
+      parameters:
+        - name: call-rule
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CallRule'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+    put:
+      tags:
+        - Call Policy
+      summary: Update Call Rule
+      operationId: update-call-rule
+      parameters:
+        - name: call-rule
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CallRule'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  '/call-rules/{call-rule}/activate':
+    post:
+      tags:
+        - Call Policy
+      summary: Activate Call Rule
+      operationId: activate-call-rule
+      parameters:
+        - name: call-rule
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  '/call-rules/{call-rule}/disable':
+    post:
+      tags:
+        - Call Policy
+      summary: Disable Call Rule
+      operationId: disable-call-rule
+      parameters:
+        - name: call-rule
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationName'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
+  '/chains/{chain}/addresses/{address}/queue':
+    get:
+      tags:
+        - Transaction
+      summary: List Address Transactions
+      description: Returns the queue of on-going transactions for an address.  Added in `26.16.1`.
+      operationId: list-address-transactions
+      parameters:
+        - $ref: '#/components/parameters/filter'
+        - name: chain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionPage'
+      servers:
+        - url: 'https://treasury.cordialapis.com/v1'
+          description: Production
+        - url: 'http://localhost:8777/v1'
+          description: Development (port TRSR)
 tags:
   - name: Access Policy
   - name: Account
@@ -3394,9 +4588,12 @@ tags:
   - name: Asset
   - name: Audit
   - name: Auto Role
+  - name: Call
+  - name: Call Policy
   - name: Chain
   - name: Credential
   - name: Feature
+  - name: Host
   - name: Internal
   - name: Key
   - name: MPC
@@ -3407,7 +4604,9 @@ tags:
   - name: Signer
   - name: Software Update
   - name: Staking
+  - name: Staking Policy
   - name: Symbol
+  - name: Tag
   - name: Transaction
   - name: Transfer
   - name: Transfer Policy
@@ -3415,6 +4614,49 @@ tags:
   - name: Type
   - name: User
 components:
+  parameters:
+    page_size:
+      name: page_size
+      in: query
+      description: The page size to download.
+      required: false
+      schema:
+        type: integer
+    page_token:
+      name: page_token
+      in: query
+      description: The token to load the next page from.
+      required: false
+      schema:
+        type: string
+    filter:
+      name: filter
+      in: query
+      description: 'A filter to apply before filling out the page (https://docs.cordialsystems.com/reference/filtering).'
+      required: false
+      schema:
+        type: string
+    output:
+      name: output
+      in: query
+      description: Download in a output format (`csv` or `pdf`).
+      required: false
+      schema:
+        type: string
+    page_number:
+      name: page_number
+      in: query
+      description: 'Retrieves the Nth page of data. '
+      required: false
+      schema:
+        type: integer
+  responses:
+    OperationNameJson:
+      description: 'The name of the operation created, which can be queried for.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OperationName'
   schemas:
     AccountPage:
       title: AccountPage
@@ -3459,10 +4701,12 @@ components:
         - internal
         - shared
         - external
+        - contract
+        - validator
       title: AddressVariant
       description: |-
-        Internal means the engine has the key, external means it does not.
-        Shared means the engine has the key, but it can also be used in Create Signature.
+        `internal` means the engine has the key, `external` means it does not.
+        The `shared` variant is deprecated: it meant that the `key` was `shared` and hence allowed use via the (dangerous) raw signing API. There is now an `allow_dangerous_raw_signing` flag instead.
       x-tags:
         - Variant
     BasicState:
@@ -3492,10 +4736,21 @@ components:
           description: OUTPUT ONLY. Increment each time the resource is modified. Plays the same role as ETag (entity tag) in HTTP.
         labels:
           $ref: '#/components/schemas/Labels'
-          description: string or null values (latter indicating tags)
+          description: |-
+            Labels are indexed, meaning they are fast to query when filtering for them.
+
+            Labels with a `uid.` prefix will have a unique constraint,
+            meaning no two resources of the same type may have the same `uid.<key>=<value>` (added in `25.9.4`).
         notes:
           $ref: '#/components/schemas/Notes'
           description: string values.
+        tags:
+          $ref: '#/components/schemas/Tags'
+        description:
+          type: string
+          description: Added in `25.12.1`.  A searchable description for the resource.
+        proposal:
+          $ref: '#/components/schemas/Proposal'
       x-tags:
         - Value
     UserName:
@@ -3539,13 +4794,13 @@ components:
         - `creator`
         - `sso`
       additionalProperties:
-        type: string
+        type:
+          - string
+          - 'null'
       examples:
         - sso: joe@cocker.com
           update-time: '2024-01-26T01:22:33Z'
-      x-go-type: custom.SafeMap
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
+      x-go-type: SafeMap
       x-tags:
         - Value
     Notes:
@@ -3562,9 +4817,328 @@ components:
       examples:
         - description: My first resource
           display-name: Cat Power
-      x-go-type: custom.SafeMap
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
+      x-go-type: SafeMap
+      x-tags:
+        - Value
+    Tags:
+      type: array
+      title: Tags
+      description: |-
+        A set of strings.  Tags be referenced in policy rules, like access-rules, transfer-rules, and staking-rules.
+
+        Added in `25.13.1`.
+      items:
+        type: string
+      x-go-type: Set
+      x-tags:
+        - Value
+    Proposal:
+      type: object
+      title: Proposal
+      properties:
+        name:
+          type: string
+        request:
+          $ref: '#/components/schemas/Request'
+      required:
+        - name
+      x-tags:
+        - Value
+    Request:
+      title: Request
+      description: |-
+        The main payload of the request is the `body`.
+        - for `Create` requests, it contains the desired resource's initial representation (`name` is disregarded if set - the name is determined by the choice of `create` vs `generate` actions, and the passed `parent` or resource `id` values).
+        - for `Update` requests, it contains the rows of the resource the client intends to modify
+        - for `Get`, `List`, and `Delete` requests, it is empty.
+      examples:
+        - treasury: 0509e4b2-16af-46df-aea3-6d29bfdaff80
+          api: 1
+          action: create
+          resource: Role
+          id: webauthn-only
+          vote: approve
+          operation: C60E7A5471594BAC1B26950EA51513C19149C35AC2A4C6E0FC7877860C099E02
+          body: '{"credentials":["web-authn"]}'
+          user: joe
+          create_time: 1705941241
+          nonce: 339613079733
+          signature: 2a6117f93516b9bb02c6e79ef9ce1ce67151baed1ad76668a5599961a822536ffff6d730f8d447f604d43c5c0ea5b01fe8795975489084d97a8cf91098b2e601
+        - scheme: https
+          authority: treasury.cordialapis.com
+          api: 1
+          action: generate
+          resource: Address
+          parent: ETH
+          user: moe
+          create_time: 1705941241
+          nonce: 339613079733
+          signature: 8683e4990f7e2abb2039757e5efe3b2ce4389b6ed596c1c457ced2a30ef4669641a71bfd454305ee2b4452e1ea760c669aa7858e0fb5a1e2b0eb5b1467fb9113
+        - scheme: https
+          authority: treasury.cordialapis.com
+          api: 1
+          action: create
+          resource: Address
+          parent: ETH
+          id: '0x2b3e38e966391e8604e39490ac881f5e23c107c4'
+          user: moe
+          create_time: 1705941241
+          nonce: 339613079733
+          signature: string
+      allOf:
+        - $ref: '#/components/schemas/Server'
+        - type: object
+          properties:
+            action:
+              $ref: '#/components/schemas/Action'
+        - $ref: '#/components/schemas/Partial_Resource_Name'
+        - $ref: '#/components/schemas/Reference'
+        - type: object
+          properties:
+            query:
+              $ref: '#/components/schemas/Query'
+        - type: object
+          properties:
+            body:
+              $ref: '#/components/schemas/Body'
+        - $ref: '#/components/schemas/Authentication'
+        - type: object
+          properties:
+            sso:
+              $ref: '#/components/schemas/SingleSignOn'
+      x-tags:
+        - Value
+    Server:
+      type: object
+      title: Server
+      description: API server details.
+      properties:
+        treasury:
+          $ref: '#/components/schemas/Id'
+          description: e.g. `""`
+        api:
+          $ref: '#/components/schemas/ApiVersion'
+          description: API version
+      x-tags:
+        - Value
+    Id:
+      type: string
+      title: Id
+      description: 'Alphanumeric, underscores, and dashes.'
+      pattern: '[A-Za-z0-9-_]+'
+      minLength: 1
+      examples:
+        - _abc-DEF7
+      x-tags:
+        - Value
+    ApiVersion:
+      type: integer
+      title: ApiVersion
+      minimum: 1
+      x-tags:
+        - Value
+    Action:
+      type: string
+      enum:
+        - create
+        - get
+        - list
+        - update
+        - delete
+        - custom/activate
+        - custom/disable
+        - custom/abort
+        - custom/retry
+        - custom/price
+        - custom/heartbeat
+        - custom/cancel
+        - custom/recheck
+        - custom/share
+        - custom/load
+        - custom/restore
+        - custom/set
+        - custom/fail
+        - custom/fee-payer
+        - custom/confirm
+      title: Action
+      description: |-
+        - `create`: Create resource, client may attempt to select resource ID
+        - `get`: Specific resource
+        - `list`: All resources of a resource type, filtered by parent ID if set
+        - `update`: Modify existing resource (`version` is used engine-side to prevent accidental reversion of concurrent modification attempts)
+        - `delete`: Delete a resource
+
+        Custom actions are defined by resource type, currently: `CustomUserAction` (`custom/heartbeat`), `CustomFeatureAction` (`custom/activate` and `custom/disable`), and , `CustomTransferRuleAction` (`custom/activate` and `custom/disable`).
+
+        `custom/recheck` added in `25.6.3`.
+      examples:
+        - create
+      x-tags:
+        - Value
+    Partial_Resource_Name:
+      type: object
+      title: Partial Resource Name
+      description: 'The triple (parent, id, extension) of IDs is a higher-level than the URL path to which they correspond, but lower-level than the resource name or parent to which it corresponds (depending on the Action and whether the resource type is nested or not).'
+      properties:
+        resource:
+          $ref: '#/components/schemas/ResourceType'
+        parent:
+          $ref: '#/components/schemas/Id'
+        id:
+          $ref: '#/components/schemas/Id'
+        extension:
+          $ref: '#/components/schemas/Id'
+      required:
+        - resource
+      x-tags:
+        - Value
+    ResourceType:
+      type: string
+      enum:
+        - AccessRule
+        - Account
+        - Address
+        - Asset
+        - Chain
+        - Credential
+        - Feature
+        - Key
+        - Operation
+        - Role
+        - Signature
+        - Transfer
+        - TransferRule
+        - User
+        - Treasury
+        - Transaction
+        - SoftwareUpdate
+        - Signer
+        - Symbol
+        - KeyResponse
+        - SignatureResponse
+        - Staking
+        - Signatory
+        - StakingRule
+        - Tag
+        - Host
+        - Call
+        - CallRule
+      title: ResourceType
+      x-tags:
+        - Value
+    Reference:
+      type: object
+      title: Reference
+      description: Used when approving or challenging an `Operation in the `authorizing` state.
+      properties:
+        vote:
+          $ref: '#/components/schemas/Vote'
+        operation:
+          $ref: '#/components/schemas/Id'
+          description: '`Id` of the `Operation` being judged'
+      examples:
+        - vote: approve
+          operation: C60E7A5471594BAC1B26950EA51513C19149C35AC2A4C6E0FC7877860C099E02
+      x-tags:
+        - Value
+    Vote:
+      type: string
+      enum:
+        - approve
+        - cancel
+      title: Vote
+      examples:
+        - approve
+      x-tags:
+        - Value
+    Query:
+      type: object
+      title: Query
+      description: This is any object with `string` values. Clients should strive to serialize this in sorted key order - but two query objects with the same key-value pairs are considered equal.
+      additionalProperties:
+        type: string
+      x-go-type: SafeMap
+      x-tags:
+        - Value
+    Body:
+      type: string
+      title: Body
+      description: 'Body of an HTTP request. For `create` and `update` actions, this is some resource (e.g. `User`). For `get`, `list` and `delete` it is empty.'
+      x-tags:
+        - Value
+    Authentication:
+      title: Authentication
+      description: The create_time and nonce together contribute to replay protection - the engine will only accept the "same" request within a certain lookback window if the nonces differ.
+      allOf:
+        - type: object
+          properties:
+            create_time:
+              type: integer
+              description: 'Seconds since the UNIX epoch, likely 10 digits.'
+              examples:
+                - 1705941241
+            nonce:
+              type: integer
+              description: '12 digit integer, roughly 40 bits of entropy.'
+              minimum: 100000000000
+              maximum: 999999999999
+              examples:
+                - 339613079733
+        - $ref: '#/components/schemas/ClientKeyData'
+        - type: object
+          properties:
+            signature:
+              $ref: '#/components/schemas/Hex'
+      x-tags:
+        - Value
+    ClientKeyData:
+      type: object
+      title: ClientKeyData
+      allOf:
+        - type: object
+          properties:
+            algorithm:
+              type: string
+              enum:
+                - ecdsa-k256-sha256
+                - ecdsa-p256-sha256
+                - ed25519
+            public_key:
+              $ref: '#/components/schemas/Hex'
+              description: Public Key (hex) of credential signing the message.  This should always be used except for WebAuthn signing.
+        - type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/Id'
+              description: 'ID of user signing the message - only valid for webauthn algorithm. This is special-cased, because WebAuthn cannot supply the public key before signing. '
+      x-tags:
+        - Data
+    Hex:
+      type: string
+      title: Hex
+      description: Hex-encoded bytes
+      pattern: '[A-F0-9]+'
+      x-tags:
+        - Value
+    SingleSignOn:
+      type: object
+      title: SingleSignOn
+      description: |-
+        A single-sign-on assertion includes a signature from your single-sign-on provider over a temporary credential that can than be used to sign a request to Treasury.
+
+        Treasury typically requires this for `human` variant users in addition to a primary signature.
+      properties:
+        create_time:
+          type: integer
+          description: Unix timestamp.
+        nonce:
+          type: integer
+          description: random number
+        id:
+          type: string
+          description: JWT from SSO provider that has included the public key of the credential used to produce the signature.
+        signature:
+          $ref: '#/components/schemas/Hex'
       x-tags:
         - Value
     AccountData:
@@ -3572,13 +5146,21 @@ components:
       title: AccountData
       description: 'An account is a container for addresses. Adding or removing an address should usually be permissioned, as transfer rules may be formulated in terms of accounts, and have cascading effects on addresses.'
       properties:
+        allow_dangerous_raw_signing:
+          type: boolean
+          description: '`INPUT-ONLY`, immutable'
         addresses:
           type: array
-          description: The addresses belonging to this account.
+          description: |-
+            The addresses belonging to this account.
+            It's recommended to not use this field, and to query addresses directly with a filter for the account.
           items:
             $ref: '#/components/schemas/AddressName'
+          x-deprecated: true
         defaults:
           $ref: '#/components/schemas/DefaultAddresses'
+        fee_payer:
+          $ref: '#/components/schemas/FeePayerPolicy'
       x-ResourceType: Account
       x-tags:
         - Data
@@ -3603,9 +5185,25 @@ components:
         Addresses are only considered valid if they are also in the account.
       additionalProperties:
         $ref: '#/components/schemas/AddressName'
-      x-go-type: custom.SafeMap
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
+      x-go-type: SafeMap
+      x-tags:
+        - Value
+    FeePayerPolicy:
+      type: string
+      enum:
+        - allow
+        - deny
+      title: FeePayerPolicy
+      description: |-
+        Added in `v25.13.1`.
+
+        Permit or deny address to be used as a fee sponsor for transactions.  Default is to deny.
+
+        May be set on account level, which will be inherited by all addresses in the account.
+
+        Any update resulting in an inconsistent setting between an address in an account will be rejected.
+
+        While resources may be created with an initial fee-payer policy, it may only be updated using the custom fee-payer action.  It will otherwise be immutable.
       x-tags:
         - Value
     Pagination:
@@ -3629,6 +5227,19 @@ components:
         - operations/C60E7A5471594BAC1B26950EA51513C19149C35AC2A4C6E0FC7877860C099E02
       x-tags:
         - Name
+    ExplicitFeePayerPolicy:
+      type: string
+      enum:
+        - allow
+        - deny
+        - unset
+      title: ExplicitFeePayerPolicy
+      description: |-
+        Added in `v25.13.1`.
+
+        Compared to the FeePayerPolicy, this adds the explicit variant "unset".
+      x-tags:
+        - Value
     AddressPage:
       title: AddressPage
       allOf:
@@ -3663,7 +5274,7 @@ components:
             variant:
               $ref: '#/components/schemas/AddressVariant'
             state:
-              $ref: '#/components/schemas/BasicState'
+              $ref: '#/components/schemas/AddressState'
               description: OUTPUT ONLY.
         - $ref: '#/components/schemas/Metadata'
         - $ref: '#/components/schemas/AddressData'
@@ -3674,19 +5285,54 @@ components:
         plural: addresses
       x-tags:
         - Resource
+    AddressState:
+      type: string
+      enum:
+        - active
+        - registering
+      title: AddressState
+      x-tags:
+        - State
     AddressData:
       type: object
       title: AddressData
       description: Addresses come in internal and external variants.
       properties:
+        allow_dangerous_raw_signing:
+          type: boolean
+          description: '`INPUT-ONLY`, immutable'
         key:
           $ref: '#/components/schemas/KeyName'
+          description: 'Use an existing key for the address.  If used, any `algorithm` input will be ignored.  Invalid keys for the chain will be rejected.'
         address:
           $ref: '#/components/schemas/BlockchainAddress'
           description: Immutable. Optional in create requests. Valid blockchain address.
         account:
           $ref: '#/components/schemas/AccountName'
           description: 'OUTPUT_ONLY.  If the address is in an account, the account name will be reflected here.'
+        memo:
+          type: string
+          description: Immutable.  Optional memo to associate with the address.  Only used for `external` variant.
+        algorithm:
+          $ref: '#/components/schemas/Algorithm'
+          description: |-
+            INPUT_ONLY.  If not provided, the default algorithm for the chain will be used.  Unsupported algorithms for the chain will be rejected.  Added in `25.7.3`.
+
+            DEPRECATED.  Use `type` instead.
+          x-deprecated: true
+        type:
+          type: string
+          description: Select a type for the address if the chain different types.  Valid values are defined in the respective chain resource.
+        provider:
+          type: string
+          description: 'Only for validator addresses that are to be externally supplied. Designation for the validator providers, e.g. `asymmetric`.'
+        fee_payer:
+          $ref: '#/components/schemas/FeePayerPolicy'
+        transactions:
+          type: array
+          description: Set only if the chain requires the address to submit registration transactions in order to become active.
+          items:
+            $ref: '#/components/schemas/TransactionName'
       x-tags:
         - Data
     KeyName:
@@ -3706,8 +5352,33 @@ components:
         Valid blockchain address.
 
         Within treasury, resources have restricted `Id` values. For many blockchains, this is not a problem, as the "actual" address on the blockchain is a valid `Id`. For some, characters like `.` are used which are not valid in an `Id`. Hence, resources like `Address` and `Asset`, in general, use the normalized `Id` value corresponding to the blockchain address as their resource ID. They also have an optional field `blockchain_address` allowing to record the "real" blockchain address. It is required that this value normalizes to the resource ID of the resource.
+      examples:
+        - AAPGdMUVxGJqbY1gg6jMA7hnQdSzDtfcW4DPAVL56L9w
+        - '0x2bc0dde194d722fe98ed3912cad464380f2225ac'
+        - cosmos13dd5eahz5xkytny9dqnpre7488hm7ahsnadr3w
       x-tags:
         - Value
+    Algorithm:
+      type: string
+      enum:
+        - ed255
+        - k256-keccak
+        - k256-sha2
+        - p256
+        - taproot
+        - bls12-381-g2-blake2
+      title: Algorithm
+      description: 'Signing algorithm. ed255 and taproot are Schnorr-like, k256* and p256 are ECDSA.'
+      x-tags:
+        - Value
+    TransactionName:
+      type: string
+      title: TransactionName
+      pattern: 'transactions/[A-Za-z0-9-_]+'
+      examples:
+        - transactions/123
+      x-tags:
+        - Name
     AssetPage:
       title: AssetPage
       allOf:
@@ -3852,10 +5523,10 @@ components:
       title: Chain
       description: 'We tend to use the symbol of the native/gas asst of the chain as symbol of the chain, as one does.'
       examples:
-        - name: chains/BTC
+        - name: chains/SOL
           create_time: '2023-07-30T011:30:15Z'
-          symbol: BTC
-          description: Bitcoin
+          confirmations: 4
+          symbol: SOL
         - name: chains/ETH
           create_time: '2023-07-30T011:30:15Z'
           symbol: ETH
@@ -3864,10 +5535,9 @@ components:
           create_time: '2023-07-30T011:30:15Z'
           symbol: MATIC
           description: Polygon
-        - name: chains/SOL
+        - name: chains/BTC
           create_time: '2023-07-30T011:30:15Z'
-          symbol: SOL
-          description: Solana
+          symbol: BTC
       allOf:
         - type: object
           properties:
@@ -3918,6 +5588,13 @@ components:
           minimum: 0
         priority:
           $ref: '#/components/schemas/Priority'
+        fee_limits:
+          $ref: '#/components/schemas/FeeLimits'
+        retry:
+          $ref: '#/components/schemas/RetryPolicy'
+        address:
+          $ref: '#/components/schemas/ChainAddressConfig'
+          description: This is set only when the chain has multiple types of addresses.
       x-tags:
         - Data
     Priority:
@@ -3947,6 +5624,96 @@ components:
         **aggressive**: Pay a premium over market rate to ensure transaction always lands quickly.
 
         **very-aggressive**: Pay an even larger premium, meant for very volatile periods.
+      x-tags:
+        - Value
+    FeeLimits:
+      type: object
+      title: FeeLimits
+      description: |-
+        Introduced in `v25.3.1`.
+
+        A set describing the maximum total amount that could be paid in a transaction.  This does not influence fee estimation in any way, but instead will block any transaction with a fee exceeding the limit.
+
+        For example, if the fee limit for `ETH` asset is "0.1", then any transaction on that chain spending >0.1 `ETH` for the fee will be rejected.
+
+        A transaction that tries to spend an asset for fee that does not have a limit will be rejected.
+
+        The intent is to provide a configureable sanity limit to protect from fee griefing attacks.
+      additionalProperties:
+        type: string
+      examples:
+        - SOL: '0.5'
+        - uusdc: '10.0'
+          ueure: '10.0'
+      x-go-type: SafeMap
+      x-tags:
+        - Value
+    RetryPolicy:
+      type: object
+      title: RetryPolicy
+      description: |-
+        `EXPERIMENTAL` Added in `25.7.2`.
+
+        Defining a retry policy will enable transactions to be automatically retried if they are still in `submitting` or `finalizing` state after a certain time period.
+      properties:
+        attempts:
+          type: integer
+          description: Number of attempts before failing the transaction.
+        after:
+          $ref: '#/components/schemas/Duration'
+          description: 'Period inbetween attempts.  If omitted, it will never retry.'
+        message:
+          $ref: '#/components/schemas/StringFilter'
+          description: 'Optional list of RPC error response messages.  If set, it will limit attempts to retry if the broadcast RPC error message matches one of these messages.'
+      required:
+        - attempts
+      examples:
+        - attempts: 2
+          period: 10d
+      x-tags:
+        - Value
+    Duration:
+      type: string
+      title: Duration
+      description: 'Multiple of either weeks, days, hours, minutes or seconds. Compared to Go''s time.ParseDuration, this is both a simplification of (only positive, integer values, no mixing of say hours and minutes) and an extension (week support, and day support defined as `1d` = `24h`). In normalized form, the largest base unit should be used (e.g. `1d` instead of `24h`, but can use `36h` for a day and a half).'
+      pattern: '([1-9][0-9]*w|[1-9][0-9]*d|[1-9][0-9]*h|[1-9][0-9]*m|[1-9][0-9]*s)'
+      examples:
+        - 10d
+      x-go-type: DurationString
+      x-tags:
+        - Value
+    StringFilter:
+      title: StringFilter
+      examples:
+        - string
+        - - string1
+          - string2
+      oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+      x-go-type: FlexibleArray
+      x-tags:
+        - Filter
+    ChainAddressConfig:
+      type: object
+      title: ChainAddressConfig
+      properties:
+        types:
+          type: array
+          items:
+            type: string
+      required:
+        - types
+      examples:
+        - types:
+            - segwit
+            - taproot
+            - legacy
+        - types:
+            - icp
+            - icrc1
       x-tags:
         - Value
     CredentialPage:
@@ -4016,15 +5783,10 @@ components:
         aaguid:
           $ref: '#/components/schemas/StdBase64'
           description: '`OUTPUT_ONLY`. This is only provided when the credential is a web-authn kind.  Base64 encoded.'
+        rp_id_hash:
+          $ref: '#/components/schemas/StdBase64'
       x-tags:
         - Data
-    Hex:
-      type: string
-      title: Hex
-      description: Hex-encoded bytes
-      pattern: '[A-F0-9]+'
-      x-tags:
-        - Value
     StdBase64:
       type: string
       title: StdBase64
@@ -4133,257 +5895,6 @@ components:
               x-experimental: true
       x-tags:
         - Data
-    Request:
-      title: Request
-      description: |-
-        The main payload of the request is the `body`.
-        - for `Create` requests, it contains the desired resource's initial representation (`name` is disregarded if set - the name is determined by the choice of `create` vs `generate` actions, and the passed `parent` or resource `id` values).
-        - for `Update` requests, it contains the rows of the resource the client intends to modify
-        - for `Get`, `List`, and `Delete` requests, it is empty.
-      examples:
-        - treasury: 0509e4b2-16af-46df-aea3-6d29bfdaff80
-          api: 1
-          action: create
-          resource: Role
-          id: webauthn-only
-          vote: approve
-          operation: C60E7A5471594BAC1B26950EA51513C19149C35AC2A4C6E0FC7877860C099E02
-          body: '{"credentials":["web-authn"]}'
-          user: joe
-          create_time: 1705941241
-          nonce: 339613079733
-          signature: 2a6117f93516b9bb02c6e79ef9ce1ce67151baed1ad76668a5599961a822536ffff6d730f8d447f604d43c5c0ea5b01fe8795975489084d97a8cf91098b2e601
-        - scheme: https
-          authority: treasury.cordialapis.com
-          api: 1
-          action: generate
-          resource: Address
-          parent: ETH
-          user: moe
-          create_time: 1705941241
-          nonce: 339613079733
-          signature: 8683e4990f7e2abb2039757e5efe3b2ce4389b6ed596c1c457ced2a30ef4669641a71bfd454305ee2b4452e1ea760c669aa7858e0fb5a1e2b0eb5b1467fb9113
-        - scheme: https
-          authority: treasury.cordialapis.com
-          api: 1
-          action: create
-          resource: Address
-          parent: ETH
-          id: '0x2b3e38e966391e8604e39490ac881f5e23c107c4'
-          user: moe
-          create_time: 1705941241
-          nonce: 339613079733
-          signature: string
-      allOf:
-        - $ref: '#/components/schemas/Server'
-        - type: object
-          properties:
-            action:
-              $ref: '#/components/schemas/Action'
-        - $ref: '#/components/schemas/Partial_Resource_Name'
-        - $ref: '#/components/schemas/Reference'
-        - type: object
-          properties:
-            query:
-              $ref: '#/components/schemas/Query'
-        - type: object
-          properties:
-            body:
-              $ref: '#/components/schemas/Body'
-        - $ref: '#/components/schemas/Authentication'
-      x-tags:
-        - Value
-    Server:
-      type: object
-      title: Server
-      description: API server details.
-      properties:
-        treasury:
-          $ref: '#/components/schemas/Id'
-          description: e.g. `""`
-        api:
-          $ref: '#/components/schemas/ApiVersion'
-          description: API version
-      x-tags:
-        - Value
-    Id:
-      type: string
-      title: Id
-      description: 'Alphanumeric, underscores, and dashes.'
-      pattern: '[A-Za-z0-9-_]+'
-      minLength: 1
-      examples:
-        - _abc-DEF7
-      x-tags:
-        - Value
-    ApiVersion:
-      type: integer
-      title: ApiVersion
-      minimum: 1
-      x-tags:
-        - Value
-    Action:
-      type: string
-      enum:
-        - create
-        - get
-        - list
-        - update
-        - delete
-        - custom/activate
-        - custom/disable
-        - custom/abort
-        - custom/retry
-        - custom/price
-        - custom/heartbeat
-        - custom/cancel
-      title: Action
-      description: |-
-        - `create`: Create resource, client may attempt to select resource ID
-        - `get`: Specific resource
-        - `list`: All resources of a resource type, filtered by parent ID if set
-        - `update`: Modify existing resource (`version` is used engine-side to prevent accidental reversion of concurrent modification attempts)
-        - `delete`: Delete a resource
-
-        Custom actions are defined by resource type, currently: `CustomUserAction` (`custom/heartbeat`), `CustomFeatureAction` (`custom/activate` and `custom/disable`), and , `CustomTransferRuleAction` (`custom/activate` and `custom/disable`).
-      examples:
-        - create
-      x-tags:
-        - Value
-    Partial_Resource_Name:
-      type: object
-      title: Partial Resource Name
-      description: 'The triple (parent, id, extension) of IDs is a higher-level than the URL path to which they correspond, but lower-level than the resource name or parent to which it corresponds (depending on the Action and whether the resource type is nested or not).'
-      properties:
-        resource:
-          $ref: '#/components/schemas/ResourceType'
-        parent:
-          $ref: '#/components/schemas/Id'
-        id:
-          $ref: '#/components/schemas/Id'
-        extension:
-          $ref: '#/components/schemas/Id'
-      required:
-        - resource
-      x-tags:
-        - Value
-    ResourceType:
-      type: string
-      enum:
-        - AccessRule
-        - Account
-        - Address
-        - Asset
-        - Chain
-        - Credential
-        - Feature
-        - Key
-        - Operation
-        - Role
-        - Signature
-        - Transfer
-        - TransferRule
-        - User
-        - Treasury
-        - Transaction
-        - SoftwareUpdate
-        - Signer
-        - Symbol
-        - KeyResponse
-        - SignatureResponse
-        - Staking
-      title: ResourceType
-      x-tags:
-        - Value
-    Reference:
-      type: object
-      title: Reference
-      description: Used when approving or challenging an `Operation in the `authorizing` state.
-      properties:
-        vote:
-          $ref: '#/components/schemas/Vote'
-        operation:
-          $ref: '#/components/schemas/Id'
-          description: '`Id` of the `Operation` being judged'
-      examples:
-        - vote: approve
-          operation: C60E7A5471594BAC1B26950EA51513C19149C35AC2A4C6E0FC7877860C099E02
-      x-tags:
-        - Value
-    Vote:
-      type: string
-      enum:
-        - approve
-        - cancel
-      title: Vote
-      examples:
-        - approve
-      x-tags:
-        - Value
-    Query:
-      type: object
-      title: Query
-      description: This is any object with `string` values. Clients should strive to serialize this in sorted key order - but two query objects with the same key-value pairs are considered equal.
-      additionalProperties:
-        type: string
-      x-go-type: custom.SafeMap
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
-      x-tags:
-        - Value
-    Body:
-      type: string
-      title: Body
-      description: 'Body of an HTTP request. For `create` and `update` actions, this is some resource (e.g. `User`). For `get`, `list` and `delete` it is empty.'
-      x-tags:
-        - Value
-    Authentication:
-      title: Authentication
-      description: The create_time and nonce together contribute to replay protection - the engine will only accept the "same" request within a certain lookback window if the nonces differ.
-      allOf:
-        - type: object
-          properties:
-            create_time:
-              type: integer
-              description: 'Seconds since the UNIX epoch, likely 10 digits.'
-              examples:
-                - 1705941241
-            nonce:
-              type: integer
-              description: '12 digit integer, roughly 40 bits of entropy.'
-              minimum: 100000000000
-              maximum: 999999999999
-              examples:
-                - 339613079733
-        - $ref: '#/components/schemas/ClientKeyData'
-        - type: object
-          properties:
-            signature:
-              $ref: '#/components/schemas/Hex'
-      x-tags:
-        - Value
-    ClientKeyData:
-      type: object
-      title: ClientKeyData
-      allOf:
-        - type: object
-          properties:
-            algorithm:
-              type: string
-              enum:
-                - ecdsa-k256-sha256
-                - ecdsa-p256-sha256
-                - ed25519
-            public_key:
-              $ref: '#/components/schemas/Hex'
-              description: Public Key (hex) of credential signing the message.  This should always be used except for WebAuthn signing.
-        - type: object
-          properties:
-            user:
-              $ref: '#/components/schemas/Id'
-              description: 'ID of user signing the message - only valid for webauthn algorithm. This is special-cased, because WebAuthn cannot supply the public key before signing. '
-      x-tags:
-        - Data
     Response:
       type: object
       title: Response
@@ -4411,7 +5922,7 @@ components:
 
         `Invalid Argument` is typically a programming error.
 
-        We currently don't use authentication, `Unauthenticated` is an authn error, vs. `Permission Denied` which is an authz error.
+        `Unauthenticated` is an authn error, vs. `Permission Denied` which is an authz error.
 
         For MPC:
         - `Deadline Exceed` can indicate some node failed to participate in time
@@ -4419,21 +5930,21 @@ components:
 
         |Code|Name|HTTP Code|HTTP Name|CRUD|Description|
         |----|----|---------|---------|----|-----------|
-        |~1~|~Cancelled~|499|Client Closed Request|_not used_||
+        |1|Cancelled|400|Bad Request|_not used_||
         |2|Unknown|500|Internal Server Error|`*`|Unknown error|
         |3|Invalid Argument|400|Bad Request|`*`|The client specified an invalid argument|
-        |~4~|~Deadline Exceeded~|504|Gateway Timeout|_not used_|The deadline expired before the operation could complete.|
+        |4|Deadline Exceeded|500|Internal Server Error|_not used_|The deadline expired before the operation could complete.|
         |5|Not Found|404|Not Found|`Read`, `Delete`|Some requested entity was not found|
         |6|Already Exists|409|Conflict|`Create`|The entity that a client attempted to create already exists|
         |7|Permission Denied|403|Forbidden|`*`|The caller does not have permission to execute the specified operation|
-        |~8~|~Resource Exhausted~|429|Too Many Requests|_not used_||
-        |~9~|~Failed Precondition~|400|Bad Request|_not used_|The operation was rejected because the system is not in a state required for the operation's execution|
-        |~10~|~Aborted~|409|Conflict|_not used_|The operation was aborted|
-        |~11~|~Out of Range~|400|Bad Request|`Read`|The operation was attempted past the valid range|
+        |8|Resource Exhausted|429|Too Many Requests|_not used_||
+        |9|Failed Precondition|400|Bad Request|_not used_|The operation was rejected because the system is not in a state required for the operation's execution|
+        |10|Aborted|409|Conflict|_not used_|The operation was aborted|
+        |11|Out of Range|400|Bad Request|`Read`|The operation was attempted past the valid range|
         |12|Unimplemented|501|Not Implemented|`*`|The operation is not implemented or is not supported/enabled in this service|
         |13|Internal|500|Internal Server Error|`*`|This error code is reserved for serious errors|
         |14|Unavailable|503|Service Unavailable|`*`|The service is currently unavailable.  This is most likely a transient condition, which can be corrected by retrying with a backoff|
-        |~15~|~Data loss~|500|Internal Server Error|_not used_|Unrecoverable data loss or corruption|
+        |15|Data Loss|500|Internal Server Error|_not used_|Unrecoverable data loss or corruption|
         |16|Unauthenticated|401|Unauthorized|`*`|The request does not have valid authentication credentials for the operation|
       properties:
         code:
@@ -4445,18 +5956,65 @@ components:
           type: string
         details:
           type: array
+          description: 'Details may be set on some requests where additional structured data may help troubleshoot.  For example, this will be set when policy rejects a request.'
           items:
-            type: string
+            $ref: '#/components/schemas/ErrorDetail'
       required:
         - code
         - status
         - message
       examples:
-        - code: 2
-          status: Unknown
-          message: Error in Trip
+        - code: 7
+          status: PermissionDenied
+          message: access policy did not pass
           details:
-            - 'incorrect secret openings: {2, 3}'
+            - policy: access
+              user: users/intern
+              decision: pending
+              rules:
+                - rule: co-root-role
+                  variant: allow
+                  decision: pending
+                  invalid:
+                    - approve
+                  min_approvals: 1
+                - rule: co-root-role-approve
+                  variant: allow
+                  decision: pending
+                  invalid:
+                    - approve
+                  min_approvals: 1
+                - rule: operator-role
+                  variant: allow
+                  decision: deny
+                  invalid:
+                    - initiate
+                    - approve
+                  min_approvals: 1
+                - rule: operator-role-approve
+                  variant: allow
+                  decision: pending
+                  invalid:
+                    - approve
+                  min_approvals: 1
+                - rule: root
+                  variant: allow
+                  decision: deny
+                  invalid:
+                    - initiate
+                    - approve
+                - rule: root-role
+                  variant: allow
+                  decision: deny
+                  invalid:
+                    - initiate
+                    - approve
+                - rule: root-role-approve
+                  variant: allow
+                  decision: pending
+                  invalid:
+                    - approve
+                  min_approvals: 1
         - code: 2
           status: Unknown
           message: Error in Trip
@@ -4494,6 +6052,132 @@ components:
       title: ErrorStatus
       x-tags:
         - Error
+    ErrorDetail:
+      title: ErrorDetail
+      oneOf:
+        - $ref: '#/components/schemas/AccessPolicyDetail'
+        - $ref: '#/components/schemas/TransferPolicyDetail'
+        - type: string
+      x-tags:
+        - Error
+    AccessPolicyDetail:
+      type: object
+      title: AccessPolicyDetail
+      properties:
+        policy:
+          const: access
+        decision:
+          $ref: '#/components/schemas/RuleDecision'
+        user:
+          $ref: '#/components/schemas/UserName'
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccessRuleEvaluation'
+      required:
+        - policy
+        - decision
+        - rules
+      x-tags:
+        - Value
+    RuleDecision:
+      type: string
+      enum:
+        - allow
+        - deny
+        - pending
+        - cancel
+      title: RuleDecision
+      x-tags:
+        - Value
+    AccessRuleEvaluation:
+      type: object
+      title: AccessRuleEvaluation
+      properties:
+        rule:
+          type: string
+          description: The ID of the rule
+        variant:
+          $ref: '#/components/schemas/RuleVariant'
+        decision:
+          $ref: '#/components/schemas/RuleDecision'
+        invalid:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestVariant'
+        approvals:
+          type: number
+        min_approvals:
+          type: number
+      required:
+        - rule
+        - variant
+        - decision
+      x-tags:
+        - Value
+    RuleVariant:
+      type: string
+      enum:
+        - allow
+        - require
+        - deny
+      title: RuleVariant
+      x-tags:
+        - Variant
+    RequestVariant:
+      type: string
+      enum:
+        - initiate
+        - approve
+        - cancel
+      title: RequestVariant
+      x-tags:
+        - Variant
+    TransferPolicyDetail:
+      type: object
+      title: TransferPolicyDetail
+      properties:
+        policy:
+          type: string
+          enum:
+            - transfer
+            - staking
+            - call
+        decision:
+          $ref: '#/components/schemas/RuleDecision'
+        user:
+          $ref: '#/components/schemas/UserName'
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferRuleEvaluation'
+      required:
+        - policy
+        - decision
+        - rules
+      x-tags:
+        - Value
+    TransferRuleEvaluation:
+      type: object
+      title: TransferRuleEvaluation
+      properties:
+        rule:
+          type: string
+          description: ID of the rule
+        variant:
+          $ref: '#/components/schemas/RuleVariant'
+        decision:
+          $ref: '#/components/schemas/RuleDecision'
+        missing_price:
+          type: boolean
+        access:
+          $ref: '#/components/schemas/AccessPolicyDetail'
+      required:
+        - rule
+        - variant
+        - decision
+      x-tags:
+        - Value
     TransferPage:
       title: TransferPage
       allOf:
@@ -4534,6 +6218,11 @@ components:
             state:
               $ref: '#/components/schemas/TransferState'
               description: OUTPUT ONLY.
+            variant:
+              $ref: '#/components/schemas/TransferVariant'
+          required:
+            - name
+            - state
         - $ref: '#/components/schemas/Metadata'
         - $ref: '#/components/schemas/TransferData'
       x-tags:
@@ -4556,6 +6245,7 @@ components:
         - succeeded
         - failed
         - queued
+        - reverted
       title: TransferState
       description: |-
         - **preparing**: Gathering inputs needed to construct the transaction for the transfer.
@@ -4565,9 +6255,20 @@ components:
         - **finalizing**: Waiting for confirmation that the signed transactions was is sufficiently final (requirement depends on the upstream chain, for instance Cosmos is instantly final, whereas Bitcoin usually uses 6 confirmations for finality)
         - **succeeded**: Transaction has enough confirmations to be considered final for the given chain
         - **failed**: This transfer failed, and nothing can be done to make further progress
+        - **reverted**:  The transfer landed on chain but reverted due to an error.
       x-tags:
         - State
+    TransferVariant:
+      type: string
+      enum:
+        - internal
+        - external
+      title: TransferVariant
+      description: '`internal` if `to` is an internal or shared address, `external` if it is an external address'
+      x-tags:
+        - Variant
     TransferData:
+      type: object
       title: TransferData
       description: |-
         Semantic representation of a transfer of one asset between two addresses.
@@ -4589,10 +6290,37 @@ components:
       allOf:
         - type: object
           properties:
+            asset:
+              $ref: '#/components/schemas/AssetName'
+              description: |-
+                May input an asset name or symbol name.
+                The created resource will always output the asset name, along with the current `symbol`.
+            symbol:
+              $ref: '#/components/schemas/SymbolName'
+            amount:
+              $ref: '#/components/schemas/PositiveDecimal'
             from:
-              $ref: '#/components/schemas/AddressChoice'
+              oneOf:
+                - $ref: '#/components/schemas/AddressName'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/AddressName'
             to:
-              $ref: '#/components/schemas/AddressChoice'
+              oneOf:
+                - $ref: '#/components/schemas/AddressName'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/AddressWithAmount'
+            priority:
+              $ref: '#/components/schemas/Priority'
+            fee:
+              $ref: '#/components/schemas/Fee'
+            memo:
+              type: string
+              description: Set a transaction memo.  Added in `25.6.4`.
+            retry:
+              $ref: '#/components/schemas/RetryPolicy'
+              description: An optional retry policy.  This will override any retry policy defined on the respective `Chain`.  Added in `25.10.1`.
             last_transaction:
               $ref: '#/components/schemas/TransactionName'
               description: |-
@@ -4600,29 +6328,37 @@ components:
                 See separate transaction query to see full history.
             error:
               $ref: '#/components/schemas/TransactionError'
-            priority:
-              $ref: '#/components/schemas/Priority'
           required:
+            - asset
             - from
             - to
-        - $ref: '#/components/schemas/AssetAndSymbolAndAmount'
       x-tags:
         - Data
-    AddressChoice:
-      title: AddressChoice
-      description: 'This is not used as filter, but as field in TransferData'
-      oneOf:
-        - $ref: '#/components/schemas/AddressName'
-        - $ref: '#/components/schemas/AccountName'
-      x-go-type: string
+    AddressWithAmount:
+      type: object
+      title: AddressWithAmount
+      properties:
+        address:
+          $ref: '#/components/schemas/AddressName'
+        amount:
+          type: string
+      required:
+        - address
+        - amount
       x-tags:
-        - Filter
-    TransactionName:
-      type: string
-      title: TransactionName
-      pattern: 'transactions/[A-Za-z0-9-_]+'
+        - Value
+    Fee:
+      type: object
+      title: Fee
+      properties:
+        inclusive:
+          type: boolean
+          description: 'If set, the transaction fee will be deducted from the transfer amount.'
+        payer:
+          $ref: '#/components/schemas/AddressName'
+          description: Option to set an alternative address to pay for fee.
       x-tags:
-        - Name
+        - Value
     TransactionError:
       type: object
       title: TransactionError
@@ -4641,6 +6377,7 @@ components:
       type: string
       enum:
         - InvalidArgument
+        - FailedPrecondition
         - Unavailable
         - TimedOut
         - InsufficientBalance
@@ -4650,23 +6387,132 @@ components:
         - Aborted
         - Reverted
         - Unknown
+        - FailedPreparation
       title: TransactionErrorStatus
       x-tags:
         - Value
-    AssetAndSymbolAndAmount:
+    TransferCreate:
+      title: TransferCreate
+      description: |
+        Semantic representation of a transfer of one asset between two addresses.
+
+        - if `from` is set to an account, then a single address with sufficient balance for the asset is selected as from address (else failure)
+        - if `to` is set to an account, then one of the preferred receive addresses for the chain is selected (else failure).
+
+        Creation of a Transfer resource requires:
+        - initiator and approvers are sufficiently authorized
+        - the transfer resource passes the routing policy
+        - the transfer resource passes the approvals policy
+
+        Once a transfer resource exists (identified by monotonic ID),
+        the engine will produce
+        - one (the happy path)
+        - zero (if insufficiently funded), or
+        - more than one (if retries are necessary)
+        Transaction resources, by signing a binary representation of the transfer.
+      allOf:
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/TransferCreateData'
+      x-tags:
+        - Resource
+    TransferCreateData:
       type: object
-      title: AssetAndSymbolAndAmount
+      title: TransferCreateData
+      description: |-
+        Semantic representation of a transfer of one asset between two addresses.
+
+        - if `from` is set to an account, then a single address with sufficient balance for the asset is selected as from address (else failure)
+        - if `to` is set to an account, then one of the preferred receive addresses for the chain is selected (else failure).
+
+        Creation of a Transfer resource requires:
+        - initiator and approvers are sufficiently authorized
+        - the transfer resource passes the routing policy
+        - the transfer resource passes the approvals policy
+
+        Once a transfer resource exists (identified by monotonic ID),
+        the engine will produce
+        - one (the happy path)
+        - zero (if insufficiently funded), or
+        - more than one (if retries are necessary)
+        Transaction resources, by signing a binary representation of the transfer.
+      allOf:
+        - type: object
+          properties:
+            asset:
+              $ref: '#/components/schemas/AssetOrSymbol'
+              description: |-
+                May input an asset name or symbol name.
+                The created resource will always output the asset name, along with the current `symbol`.
+            amount:
+              $ref: '#/components/schemas/PositiveDecimal'
+            from:
+              oneOf:
+                - $ref: '#/components/schemas/AddressChoice'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/AddressChoice'
+            to:
+              oneOf:
+                - $ref: '#/components/schemas/AddressChoice'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/AddressChoiceWithAmount'
+            priority:
+              $ref: '#/components/schemas/Priority'
+            memo:
+              type: string
+              description: Set a transaction memo.  Added in `25.6.4`.
+            fee:
+              $ref: '#/components/schemas/FeeCreate'
+            retry:
+              $ref: '#/components/schemas/RetryPolicy'
+              description: An optional retry policy.  This will override any retry policy defined on the respective `Chain`.  Added in `25.10.1`.
+          required:
+            - asset
+            - from
+            - to
+      x-tags:
+        - Data
+    AssetOrSymbol:
+      title: AssetOrSymbol
+      oneOf:
+        - $ref: '#/components/schemas/AssetName'
+        - $ref: '#/components/schemas/SymbolName'
+      x-go-type: string
+      x-tags:
+        - Filter
+    AddressChoice:
+      title: AddressChoice
+      description: 'This is not used as filter, but as field in TransferData'
+      oneOf:
+        - $ref: '#/components/schemas/AddressName'
+        - $ref: '#/components/schemas/AccountName'
+      x-go-type: string
+      x-tags:
+        - Filter
+    AddressChoiceWithAmount:
+      type: object
+      title: AddressChoiceWithAmount
       properties:
-        asset:
-          $ref: '#/components/schemas/AssetName'
+        address:
+          $ref: '#/components/schemas/AddressChoice'
         amount:
-          $ref: '#/components/schemas/PositiveDecimal'
-        symbol:
           type: string
-          description: OUTPUT ONLY. The symbol for the asset if there is one.
       required:
-        - asset
+        - address
         - amount
+      x-tags:
+        - Value
+    FeeCreate:
+      type: object
+      title: FeeCreate
+      properties:
+        inclusive:
+          type: boolean
+          description: 'If set, the transaction fee will be deducted from the transfer amount.'
+        payer:
+          $ref: '#/components/schemas/AddressChoice'
+          description: Option to set an alternative address to pay for fee.
       x-tags:
         - Value
     StakingPage:
@@ -4740,8 +6586,24 @@ components:
       allOf:
         - type: object
           properties:
+            asset:
+              $ref: '#/components/schemas/AssetName'
+              description: |-
+                Optional.  The asset to stake.
+
+                Most chains only support staking one asset, which will be used as the default.
+            symbol:
+              $ref: '#/components/schemas/SymbolName'
+            amount:
+              $ref: '#/components/schemas/PositiveDecimal'
+              description: The amount is required depending on the chain.  Some chains will use the full address balance instead of a specified amount.
             from:
-              $ref: '#/components/schemas/AddressChoice'
+              $ref: '#/components/schemas/AddressName'
+            to:
+              $ref: '#/components/schemas/AddressName'
+              description: The validator address to stake to.  This is optional depending on the chain or protocol.  It is required on most.
+            priority:
+              $ref: '#/components/schemas/Priority'
             last_transaction:
               $ref: '#/components/schemas/TransactionName'
               description: |-
@@ -4749,41 +6611,11 @@ components:
                 See separate transaction query to see full history.
             error:
               $ref: '#/components/schemas/TransactionError'
-            priority:
-              $ref: '#/components/schemas/Priority'
-            amount:
-              $ref: '#/components/schemas/PositiveDecimal'
-            validator:
-              type: string
-              description: 'Validator that the staking operation relates to, if relevant.'
-            account:
-              type: string
-              description: 'Account that the staking operation relates to, if relevant.'
-            provider:
-              $ref: '#/components/schemas/Provider'
-            asset:
-              $ref: '#/components/schemas/AssetName'
-              description: |-
-                Optional.  The asset to stake. 
-
-                Most chains only support staking one asset, which will be used as the default.
           required:
+            - asset
             - from
-            - amount
       x-tags:
         - Data
-    Provider:
-      type: string
-      enum:
-        - providers/native
-        - providers/kiln
-        - providers/figment
-        - providers/twinstake
-      title: Provider
-      examples:
-        - providers/native
-      x-tags:
-        - Value
     UserPage:
       title: UserPage
       allOf:
@@ -4808,8 +6640,10 @@ components:
               $ref: '#/components/schemas/UserVariant'
               description: '`IMMUTABLE`'
             state:
-              $ref: '#/components/schemas/BasicState'
+              $ref: '#/components/schemas/UserState'
               description: OUTPUT ONLY.
+          required:
+            - variant
         - $ref: '#/components/schemas/Metadata'
         - $ref: '#/components/schemas/UserData'
       x-tags:
@@ -4824,6 +6658,26 @@ components:
         - human
       x-tags:
         - Variant
+    UserState:
+      type: string
+      enum:
+        - active
+        - inactive
+        - invited
+      title: UserState
+      description: |-
+        Added after `25.12.1`.
+
+        **active**: User has a credential registered.
+
+        **inactive**: User does not have any credential or invite code.
+
+        **invited**: User has been invited.  User will be deleted if their invitation expires or is deleted.
+      examples:
+        - active
+        - invited
+      x-tags:
+        - State
     UserData:
       type: object
       title: UserData
@@ -4835,6 +6689,19 @@ components:
             $ref: '#/components/schemas/RoleName'
         active_time:
           $ref: '#/components/schemas/Timestamp'
+        sso:
+          $ref: '#/components/schemas/UserSso'
+          description: '`IMMUTABLE` The SSO subject (OAuth identifier) of the user, as used by identity provider, for use with OpenPubkey credentials.'
+        invite:
+          $ref: '#/components/schemas/Hex'
+          description: |-
+            `INPUT_ONLY` The public key of an invite code.
+
+            The user will need to use this invite in order to register a credential.
+
+            Upon registering, the user will switch to `active` state.  Otherwise if the invite expires, then this user will be deleted.
+
+            Providing this field is equivilent to creating a User and then separately creating an `invite` credential.
       x-tags:
         - Data
     RoleName:
@@ -4846,6 +6713,19 @@ components:
         - roles/admin
       x-tags:
         - Name
+    UserSso:
+      type: object
+      title: UserSso
+      properties:
+        subject:
+          type: string
+        issuer:
+          type: string
+      required:
+        - subject
+        - issuer
+      x-tags:
+        - Value
     RolePage:
       title: RolePage
       allOf:
@@ -4894,9 +6774,7 @@ components:
         - type: array
           items:
             $ref: '#/components/schemas/CredentialVariant'
-      x-go-type: custom.FlexibleArray
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
+      x-go-type: FlexibleArray
       x-tags:
         - Filter
     UserVariantFilter:
@@ -4906,9 +6784,7 @@ components:
         - type: array
           items:
             $ref: '#/components/schemas/UserVariant'
-      x-go-type: custom.FlexibleArray
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
+      x-go-type: FlexibleArray
       x-tags:
         - Filter
     FeaturePage:
@@ -4998,15 +6874,6 @@ components:
         - access-rules/freeze-everything
       x-tags:
         - Name
-    RuleVariant:
-      type: string
-      enum:
-        - allow
-        - require
-        - deny
-      title: RuleVariant
-      x-tags:
-        - Variant
     AccessRuleData:
       title: AccessRuleData
       description: |
@@ -5141,7 +7008,7 @@ components:
           approvals: 1
       allOf:
         - $ref: '#/components/schemas/RequestFilter'
-        - $ref: '#/components/schemas/QuorumFilter'
+        - $ref: '#/components/schemas/AccessQuorumFilter'
       x-tags:
         - Data
     RequestFilter:
@@ -5174,9 +7041,7 @@ components:
         - type: array
           items:
             $ref: '#/components/schemas/Action'
-      x-go-type: custom.FlexibleArray
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
+      x-go-type: FlexibleArray
       x-tags:
         - Filter
     ResourceFilter:
@@ -5186,19 +7051,24 @@ components:
           properties:
             type:
               $ref: '#/components/schemas/ResourceTypeFilter'
+              description: Optional resource type(s) to match target resource by.
             state:
               $ref: '#/components/schemas/StringFilter'
+              description: Optional state(s) to match target resources by.
             variant:
               $ref: '#/components/schemas/StringFilter'
+              description: Optional variant(s) to match target resources by.
             name:
               $ref: '#/components/schemas/StringFilter'
+              description: Optional name(s) to match target resources by.
+            tag:
+              $ref: '#/components/schemas/StringFilter'
+              description: Tags to match target resources by.  Added in `25.13.3`.
         - $ref: '#/components/schemas/ResourceType'
         - type: array
           items:
             $ref: '#/components/schemas/ResourceType'
-      x-go-type: custom.FlexibleResourceFilter
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
+      x-go-type: FlexibleResourceFilter
       x-tags:
         - Filter
     ResourceTypeFilter:
@@ -5213,25 +7083,7 @@ components:
         - type: array
           items:
             $ref: '#/components/schemas/ResourceType'
-      x-go-type: custom.FlexibleArray
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
-      x-tags:
-        - Filter
-    StringFilter:
-      title: StringFilter
-      examples:
-        - string
-        - - string1
-          - string2
-      oneOf:
-        - type: string
-        - type: array
-          items:
-            type: string
-      x-go-type: custom.FlexibleArray
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
+      x-go-type: FlexibleArray
       x-tags:
         - Filter
     DataFilter:
@@ -5248,24 +7100,55 @@ components:
         Using non-data fields (like name, state, variant, metadata) is explicitly excluded and invalid.
 
         Currently, we may only support primitive types (integer, string, boolean) as values, and top-level keys.
-      x-go-type: custom.SafeMapAny
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
+      x-go-type: SafeMapAny
       x-tags:
         - Filter
-    QuorumFilter:
+    AccessQuorumFilter:
       type: object
-      title: QuorumFilter
+      title: AccessQuorumFilter
       properties:
         initiate:
-          $ref: '#/components/schemas/UserFilter'
+          $ref: '#/components/schemas/ExplicitUserFilter'
         approve:
-          $ref: '#/components/schemas/UserFilter'
+          $ref: '#/components/schemas/ExplicitUserFilter'
         cancel:
           $ref: '#/components/schemas/UserFilter'
+          description: 'No longer supported after `25.13.1`.  Instead, the initiator or any approvers may cancel.'
+          x-deprecated: true
         approvals:
           type: integer
           minimum: 0
+      x-tags:
+        - Filter
+    ExplicitUserFilter:
+      title: ExplicitUserFilter
+      examples:
+        - users/admin-2
+        - - users/admin-2
+          - roles/trader
+      oneOf:
+        - $ref: '#/components/schemas/UserFilterEntry'
+        - type: array
+          items:
+            $ref: '#/components/schemas/UserFilterEntry'
+        - $ref: '#/components/schemas/AnyUser'
+      x-go-type: FlexibleArray
+      x-tags:
+        - Filter
+    UserFilterEntry:
+      title: UserFilterEntry
+      examples:
+        - users/admin-2
+        - roles/admin
+        - any/user
+      oneOf:
+        - $ref: '#/components/schemas/UserName'
+        - $ref: '#/components/schemas/RoleName'
+      x-tags:
+        - Filter
+    AnyUser:
+      const: any/user
+      title: AnyUser
       x-tags:
         - Filter
     UserFilter:
@@ -5279,26 +7162,7 @@ components:
         - type: array
           items:
             $ref: '#/components/schemas/UserFilterEntry'
-      x-go-type: custom.FlexibleArray
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
-      x-tags:
-        - Filter
-    UserFilterEntry:
-      title: UserFilterEntry
-      examples:
-        - users/admin-2
-        - roles/admin
-        - any/user
-      oneOf:
-        - $ref: '#/components/schemas/UserName'
-        - $ref: '#/components/schemas/RoleName'
-        - $ref: '#/components/schemas/AnyUser'
-      x-tags:
-        - Filter
-    AnyUser:
-      const: any/user
-      title: AnyUser
+      x-go-type: FlexibleArray
       x-tags:
         - Filter
     TransferRulePage:
@@ -5446,6 +7310,8 @@ components:
       type: object
       title: TransferFilter
       properties:
+        transfer:
+          $ref: '#/components/schemas/TransferVariantFilter'
         asset:
           $ref: '#/components/schemas/AssetFilter'
         amount:
@@ -5460,6 +7326,16 @@ components:
         - to
       x-tags:
         - Filter
+    TransferVariantFilter:
+      title: TransferVariantFilter
+      oneOf:
+        - $ref: '#/components/schemas/TransferVariant'
+        - type: array
+          items:
+            $ref: '#/components/schemas/TransferVariant'
+      x-go-type: FlexibleArray
+      x-tags:
+        - Filter
     AssetFilter:
       title: AssetFilter
       oneOf:
@@ -5468,9 +7344,7 @@ components:
           items:
             $ref: '#/components/schemas/AssetFilterEntry'
         - $ref: '#/components/schemas/AnyAsset'
-      x-go-type: custom.FlexibleArray
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
+      x-go-type: FlexibleArray
       x-tags:
         - Filter
     AssetFilterEntry:
@@ -5519,15 +7393,6 @@ components:
           within: 12h
       x-tags:
         - Filter
-    Duration:
-      type: string
-      title: Duration
-      description: 'Multiple of either weeks, days, hours, minutes or seconds. Compared to Go''s time.ParseDuration, this is both a simplification of (only positive, integer values, no mixing of say hours and minutes) and an extension (week support, and day support defined as `1d` = `24h`). In normalized form, the largest base unit should be used (e.g. `1d` instead of `24h`, but can use `36h` for a day and a half).'
-      pattern: '([1-9][0-9]*w|[1-9][0-9]*d|[1-9][0-9]*h|[1-9][0-9]*m|[1-9][0-9]*s)'
-      examples:
-        - 10d
-      x-tags:
-        - Value
     AddressFilter:
       title: AddressFilter
       oneOf:
@@ -5536,9 +7401,7 @@ components:
           items:
             $ref: '#/components/schemas/AddressFilterEntry'
         - $ref: '#/components/schemas/AnyAddress'
-      x-go-type: custom.FlexibleArray
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
+      x-go-type: FlexibleArray
       x-tags:
         - Filter
     AddressFilterEntry:
@@ -5547,6 +7410,7 @@ components:
         - $ref: '#/components/schemas/AddressName'
         - $ref: '#/components/schemas/AccountName'
         - $ref: '#/components/schemas/AccountDefaults'
+        - $ref: '#/components/schemas/TagCombination'
       x-tags:
         - Filter
     AccountDefaults:
@@ -5556,9 +7420,31 @@ components:
       pattern: 'accounts/[A-Za-z0-9-_]+/defaults'
       x-tags:
         - Filter
+    TagCombination:
+      type: string
+      title: TagCombination
+      description: 'One or more tag names, separated by " AND ". Filters and call/staking/transfer rules involving such an entry match if the given address is tagged with all listed tags. The special case of a single tag name is the most used.'
+      pattern: '^tags/[A-Za-z0-9_-]+(?: AND tags/[A-Za-z0-9_-]+)*$'
+      examples:
+        - tags/a AND tags/b
+      x-tags:
+        - Filter
     AnyAddress:
       const: any/address
       title: AnyAddress
+      x-tags:
+        - Filter
+    QuorumFilter:
+      type: object
+      title: QuorumFilter
+      properties:
+        initiate:
+          $ref: '#/components/schemas/UserFilter'
+        approve:
+          $ref: '#/components/schemas/UserFilter'
+        approvals:
+          type: integer
+          minimum: 0
       x-tags:
         - Filter
     TypePage:
@@ -5580,9 +7466,6 @@ components:
           properties:
             name:
               $ref: '#/components/schemas/TypeName'
-            state:
-              $ref: '#/components/schemas/BasicState'
-        - $ref: '#/components/schemas/Metadata'
         - $ref: '#/components/schemas/TypeData'
       x-tags:
         - Resource
@@ -5612,6 +7495,11 @@ components:
           description: All valid variants of the resource - if it has variants.
           items:
             type: string
+        states:
+          type: array
+          description: All valid states of a resource.  Added in `26.15.6`.
+          items:
+            type: string
       examples:
         - singular: user
           plural: users
@@ -5637,6 +7525,7 @@ components:
             state:
               $ref: '#/components/schemas/BasicState'
         - $ref: '#/components/schemas/TreasuryData'
+        - $ref: '#/components/schemas/Metadata'
       x-tags:
         - Resource
     TreasuryName:
@@ -5664,12 +7553,39 @@ components:
         software:
           $ref: '#/components/schemas/SoftwareVersion'
           description: Software version that Treasury instance is currently running.
+        retention:
+          $ref: '#/components/schemas/Retention'
+        keys:
+          type: object
+          properties:
+            sso:
+              type: array
+              description: 'Signing Json Web Keys, used to validate OpenPubkey credential signatures (the "keys" array in a JWKS).'
+              items:
+                type: object
+                x-go-type: json.RawMessage
+            bak:
+              type: array
+              description: Not currently implemented.
+              items:
+                $ref: '#/components/schemas/BackupKey'
+        sso_created_user_initial_roles:
+          type: array
+          description: This is currently unused in production environments.
+          items:
+            type: string
+        usage:
+          $ref: '#/components/schemas/Usage'
       examples:
         - block:
             height: '10'
             time: '2024-07-30T11:30:15Z'
           network: mainnet
           software: 24.2.10-pre.44 (rev d59575b9)
+          retention:
+            completed_operations: 30m
+            authorizing_operations: 2d
+            signatures: 1h
       x-tags:
         - Data
     Block:
@@ -5695,6 +7611,98 @@ components:
       examples:
         - 24.1.9 (rev 282bb8b6)
         - 24.2.10-pre.42 (rev 8cbb1724)
+      x-tags:
+        - Value
+    Retention:
+      type: object
+      title: Retention
+      description: |-
+        Retention periods for resources that may accumulate over time.  If no duration is set, then affected resources will always be retained.
+
+        Added in `25.2.2`.
+      properties:
+        completed_operations:
+          $ref: '#/components/schemas/Duration'
+          description: Duration to retain operations that are in the `succeeded` or `failed` state.
+        authorizing_operations:
+          $ref: '#/components/schemas/Duration'
+          description: Duration to retain operations that are in the `authorizing` state.
+        transactions:
+          $ref: '#/components/schemas/Duration'
+          description: |-
+            Duration to retain `Transfer`, `Staking`, and `Transaction` resources.
+            `Transfer` and `Staking` resources are pruned once all of their `Transactions` have been pruned.
+        signatures:
+          $ref: '#/components/schemas/Duration'
+          description: Duration to retain `Signature` resources.
+      examples:
+        - completed_operations: 30m
+          authorizing_operations: 2d
+          signatures: 1h
+      x-tags:
+        - Value
+    BackupKey:
+      type: object
+      title: BackupKey
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+          description: Optional ID for the backup key.
+        key:
+          type: string
+          description: Public backup age key.
+      examples:
+        - id: ops
+          key: age10eyz8zrje2aqgwkgpvycxzmut3e4mslc40eky9lk0avmmt6wpv3q8nft3h
+      x-tags:
+        - Value
+    Usage:
+      type: object
+      title: Usage
+      properties:
+        addresses:
+          type: object
+          properties:
+            internal:
+              type: integer
+            external:
+              type: integer
+            contract:
+              type: integer
+            validator:
+              type: integer
+          required:
+            - internal
+            - external
+            - contract
+            - validator
+        users:
+          type: object
+          properties:
+            human:
+              type: integer
+            machine:
+              type: integer
+          required:
+            - human
+            - machine
+        keys:
+          type: object
+          properties:
+            internal:
+              type: integer
+            shared:
+              type: integer
+            user:
+              type: integer
+          required:
+            - internal
+            - shared
+            - user
+        signatures:
+          type: integer
+      required:
+        - signatures
       x-tags:
         - Value
     TreasuryPage:
@@ -5762,8 +7770,16 @@ components:
         - engine
         - shared
         - user
+        - internal
       title: KeyVariant
-      description: 'Keys may be either engine-controlled (for instance, keys underlying `Address` resources), or user-controlled (with the direct key generation API).'
+      description: |-
+        Keys may be either engine-controlled (for instance, keys underlying `Address` resources), or user-controlled (with the direct key generation API).
+
+        - **internal** Can only be used by higher level APIs (like creating Transfers or Stakings).
+        - **user** Can only be use for raw signing (creating Signatures).
+        - **shared** Can be used with any API.
+
+        `engine` is deprecated in `25.1.1` and aliased to `internal`.
       x-tags:
         - Variant
     KeyState:
@@ -5776,6 +7792,7 @@ components:
         - paused
         - rotating
         - failed
+        - signatory-generating
       title: KeyState
       x-tags:
         - State
@@ -5805,20 +7822,10 @@ components:
         message:
           type: string
           description: Set when state is `failed`.
+        signatory:
+          $ref: '#/components/schemas/SignatoryName'
       x-tags:
         - Data
-    Algorithm:
-      type: string
-      enum:
-        - ed255
-        - k256-keccak
-        - k256-sha2
-        - p256
-        - taproot
-      title: Algorithm
-      description: 'Signing algorithm. ed255 and taproot are Schnorr-like, k256* and p256 are ECDSA.'
-      x-tags:
-        - Value
     PositiveInteger:
       type: integer
       title: PositiveInteger
@@ -5844,9 +7851,7 @@ components:
       title: Shares
       additionalProperties:
         $ref: '#/components/schemas/Hex'
-      x-go-type: custom.SafeMap
-      x-go-type-import.path:
-        path: github.com/cordialsys/engine/types/custom
+      x-go-type: SafeMap
       x-tags:
         - Value
     NonNegative:
@@ -5858,6 +7863,13 @@ components:
         - 0
       x-tags:
         - Value
+    SignatoryName:
+      type: string
+      title: SignatoryName
+      examples:
+        - signatories/yubihsm2
+      x-tags:
+        - Name
     SignaturePage:
       title: SignaturePage
       allOf:
@@ -5899,6 +7911,8 @@ components:
         - signing
         - signed
         - failed
+        - signatory-signing
+        - authorizing
       title: SignatureState
       x-tags:
         - State
@@ -5930,6 +7944,12 @@ components:
           description: OUTPUT_ONLY.  This is a selection of triples to use for MPC protocol.  Deprecated.
           items:
             type: integer
+        failure:
+          type: string
+          description: Optional message set when signing fails.
+        certificate:
+          $ref: '#/components/schemas/Certificate'
+          description: embedded JSON encoding of a `Certificate` value.
       x-tags:
         - Data
     SignatureFormat:
@@ -5943,6 +7963,22 @@ components:
         Raw (default) format is (r, s) each as 32 byte big-endian integers.
         With recovery adds a byte for a total length of 65 bytes for ECDSA signatures.
         DER uses the DER encoding of the (r, s) pair, for a typical length of 70 bytes.
+      x-tags:
+        - Value
+    Certificate:
+      type: object
+      title: Certificate
+      description: 'A certificate is a request to a `Signatory` signer.  The certificate should be signed by an authorization key.  The `Signatory` should verify the signature and claims.  Pending verification, it should then sign `message` with the specified key.'
+      properties:
+        claims:
+          type: string
+          description: A JSON serialized `CertificateClaims`
+        signature:
+          $ref: '#/components/schemas/SignatureName'
+          description: The signature by the authorization key.
+      required:
+        - claims
+        - signature
       x-tags:
         - Value
     KeyRequestPage:
@@ -6004,8 +8040,8 @@ components:
         hash:
           type: string
           description: |-
-            Transaction hash. 
-            It is encoded in the canonical way for the chain. 
+            Transaction hash.
+            It is encoded in the canonical way for the chain.
             This value can be used to look up the transaction on external explorers.
         fees:
           type: array
@@ -6052,27 +8088,80 @@ components:
         position:
           type: integer
           description: 'If the transaction is queued, this reports the position in the queue.'
-        serialized_signatures:
-          type: array
-          description: |-
-            Serialized signatures are hex-encoded binary of a serialized that may be specific to the chain,
-            and may be a required input to broadcast the transaction.  This is only set if the encoding is different from
-            default 'raw' signature encoding.
-          items:
-            $ref: '#/components/schemas/Hex'
         origin:
           $ref: '#/components/schemas/TransactionOrigin'
+        sign_time:
+          $ref: '#/components/schemas/Timestamp'
+          description: Time when the transaction was signed.
+        block:
+          $ref: '#/components/schemas/Block'
+        broadcast:
+          type: string
+          description: 'Additional input for broadcast/submit RPC, in addition to the transaction `payload`.  Used only for some chains.  Encoded as an embedded JSON.'
+        lookup_id:
+          type: string
+          description: |-
+            Optional ID that is preferred when looking up the transaction using connector API or on explorers.
+
+            Usually the `hash` is sufficient, but some chains need to use an ID that's only discoverable after the transaction is confirmed on chain.
+        skip_broadcast:
+          type: boolean
+        indexed:
+          type: boolean
+          description: Indicate if this is indexed on Oracle API or not.
+        from:
+          $ref: '#/components/schemas/OneOrMoreAddressNames'
+          description: |-
+            List of addresses that are involved in signing the transaction.
+            Added in `26.16.1`.
       required:
         - chain
         - origin
+        - from
       x-tags:
         - Data
+    AssetAndSymbolAndAmount:
+      type: object
+      title: AssetAndSymbolAndAmount
+      properties:
+        asset:
+          $ref: '#/components/schemas/AssetName'
+        amount:
+          $ref: '#/components/schemas/PositiveDecimal'
+        symbol:
+          type: string
+          description: OUTPUT ONLY. The symbol for the asset if there is one.
+      required:
+        - asset
+        - amount
+      x-tags:
+        - Value
     TransactionOrigin:
       title: TransactionOrigin
       oneOf:
         - $ref: '#/components/schemas/TransferName'
         - $ref: '#/components/schemas/StakingName'
+        - $ref: '#/components/schemas/CallName'
       x-go-type: string
+      x-tags:
+        - Value
+    CallName:
+      type: string
+      title: CallName
+      description: The name of a Call
+      pattern: 'calls/[A-Za-z0-9-_]+'
+      examples:
+        - calls/42
+      x-tags:
+        - Name
+    OneOrMoreAddressNames:
+      title: OneOrMoreAddressNames
+      oneOf:
+        - $ref: '#/components/schemas/AddressName'
+        - type: array
+          items:
+            $ref: '#/components/schemas/AddressName'
+      x-go-type: FlexibleArray
       x-tags:
         - Value
     SoftwareUpdatePage:
@@ -6154,6 +8243,8 @@ components:
           properties:
             name:
               $ref: '#/components/schemas/SignerName'
+            state:
+              $ref: '#/components/schemas/SignerState'
         - $ref: '#/components/schemas/SignerData'
         - $ref: '#/components/schemas/Metadata'
       x-tags:
@@ -6166,6 +8257,15 @@ components:
         - signers/3
       x-tags:
         - Name
+    SignerState:
+      type: string
+      enum:
+        - active
+        - inactive
+      title: SignerState
+      description: Added in `25.1.1`.
+      x-tags:
+        - State
     SignerData:
       type: object
       title: SignerData
@@ -6373,3 +8473,796 @@ components:
         - $ref: '#/components/schemas/Pagination'
       x-tags:
         - Page
+    Prices:
+      type: object
+      title: Prices
+      properties:
+        prices:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/PositiveDecimal'
+        valid_time:
+          $ref: '#/components/schemas/Timestamp'
+      required:
+        - prices
+        - valid_time
+      examples:
+        - prices:
+            chains/BTC/assets/BTC: '106200'
+            chains/ETH/assets/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48: '1'
+          valid_time: '2025-11-13T17:12:10Z'
+      x-tags:
+        - Value
+    StakingCreate:
+      title: StakingCreate
+      description: |
+        Semantic representation of a delegated staking operation of one native asset controlled by one address.
+
+        `stake` - move liquid assets into a active stake with some validator or provider.
+        `unstake` - move staked assets into an inactive or liquid state.
+        `withdraw` - withdraw inactive staked assets into the original liquid state.
+
+        Creation of a Stake resource requires:
+        - initiator and approvers are sufficiently authorized
+        - the staking resource passes the routing policy
+        - the staking resource passes the approvals policy
+
+        Once a staking resource exists (identified by monotonic ID),
+        the engine will produce a transaction that realizes the desired operation on the target chain.
+
+        Most chains require a validator.  Some chains, like Ethereum, require a 3rd party "provider" to manage the validator on your behalf.
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/StakingName'
+              description: OUTPUT ONLY.
+            state:
+              $ref: '#/components/schemas/TransferState'
+              description: OUTPUT ONLY.
+            variant:
+              $ref: '#/components/schemas/StakingVariant'
+          required:
+            - variant
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/StakingCreateData'
+      x-tags:
+        - Resource
+    StakingCreateData:
+      type: object
+      title: StakingCreateData
+      allOf:
+        - type: object
+          properties:
+            asset:
+              $ref: '#/components/schemas/AssetOrSymbol'
+              description: |-
+                Optional.  The asset to stake.
+
+                Most chains only support staking one asset, which will be used as the default.
+            amount:
+              $ref: '#/components/schemas/PositiveDecimal'
+            from:
+              $ref: '#/components/schemas/AddressChoice'
+            to:
+              $ref: '#/components/schemas/AddressChoice'
+              description: The validator address to stake to.  This is optional depending on the chain or protocol.  It is required on most.
+            priority:
+              $ref: '#/components/schemas/Priority'
+          required:
+            - asset
+            - amount
+            - from
+      x-tags:
+        - Data
+    Event:
+      type: object
+      title: Event
+      properties:
+        treasury_id:
+          type: string
+        host_id:
+          type: string
+        block_height:
+          type: integer
+        action:
+          $ref: '#/components/schemas/Action'
+        type:
+          $ref: '#/components/schemas/ResourceType'
+        resource:
+          type: object
+        index:
+          type: integer
+        operation:
+          $ref: '#/components/schemas/OperationName'
+        initiator:
+          type: string
+      x-tags:
+        - Value
+    Signatory:
+      title: Signatory
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/SignatoryName'
+            variant:
+              $ref: '#/components/schemas/SignatoryVariant'
+            state:
+              $ref: '#/components/schemas/SignatoryState'
+          required:
+            - variant
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/SignatoryData'
+      x-tags:
+        - Resource
+    SignatoryVariant:
+      const: yubi-hsm2
+      title: SignatoryVariant
+      x-go-type: string
+      x-tags:
+        - Variant
+    SignatoryState:
+      type: string
+      enum:
+        - initializing
+        - active
+      title: SignatoryState
+      x-tags:
+        - State
+    SignatoryData:
+      type: object
+      title: SignatoryData
+      properties:
+        algorithms:
+          type: array
+          items:
+            $ref: '#/components/schemas/Algorithm'
+        attestation:
+          $ref: '#/components/schemas/KeyName'
+        authorization:
+          $ref: '#/components/schemas/KeyName'
+        user:
+          $ref: '#/components/schemas/UserName'
+          description: The user bound to make responses on behalf of the signatory.
+        signatory:
+          $ref: '#/components/schemas/SignatoryName'
+      required:
+        - algorithms
+      x-tags:
+        - Data
+    SignatoryPage:
+      title: SignatoryPage
+      allOf:
+        - type: object
+          properties:
+            signatories:
+              type: array
+              items:
+                $ref: '#/components/schemas/Signatory'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    CertificateClaims:
+      type: object
+      title: CertificateClaims
+      properties:
+        key:
+          $ref: '#/components/schemas/KeyName'
+          description: Key with which to sign the message.
+        message:
+          $ref: '#/components/schemas/Hex'
+          description: Message requested to be signed
+        context:
+          $ref: '#/components/schemas/CertificateClaimsContext'
+      required:
+        - key
+        - message
+        - context
+      x-tags:
+        - Value
+    CertificateClaimsContext:
+      type: object
+      title: CertificateClaimsContext
+      properties:
+        initiate:
+          $ref: '#/components/schemas/UserName'
+        approve:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserName'
+        issue_time:
+          $ref: '#/components/schemas/Timestamp'
+        origin:
+          description: 'If there is an intent behind the request, it will be copied here.'
+          oneOf:
+            - $ref: '#/components/schemas/Transfer'
+            - $ref: '#/components/schemas/Staking'
+      required:
+        - initiate
+        - approve
+        - issue_time
+      x-tags:
+        - Value
+    StakingRulePage:
+      title: StakingRulePage
+      allOf:
+        - type: object
+          properties:
+            staking-rules:
+              type: array
+              items:
+                $ref: '#/components/schemas/StakingRule'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    StakingRule:
+      title: StakingRule
+      description: |
+        This is analogou to transfer rules, except the `to` address must be a `validator` address.
+      examples:
+        - name: transfer-rules/simple-btc-allowlist-account
+          variant: allow
+          asset: chains/BTC/assets/BTC
+          from: accounts/x
+          to: accounts/y
+          version: 1
+        - name: transfer-rules/simple-btc-allowlist-addresses
+          variant: allow
+          asset: chains/BTC/assets/BTC
+          from: accounts/x
+          to:
+            - chains/BTC/addresses/bc1pylz76fj9tcscnqk0gzfux87aguh3lxpnq5fyvyu9h99668wtufds479h8t
+            - chains/BTC/addresses/bc1pylz76fj9tcscnqk0gzfux87aguh3lxpnq5fyvyu9h99668wtufds479h8t
+          version: 1
+        - name: transfer-rules/multi-asset
+          variant: allow
+          asset:
+            - chains/BTC/assets/BTC
+            - chains/ETH/assets/ETH
+            - chains/ETH/assets/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+          from: accounts/x
+          to: accounts/y
+          version: 1
+        - name: transfer-rules/deny-btc-out-of-account-x
+          variant: deny
+          asset:
+            - chains/BTC/assets/BTC
+          from: accounts/x
+          to: any/address
+          version: 1
+        - name: transfer-rules/require-2-approvals-account-x
+          variant: require
+          asset: any/asset
+          from: accounts/x
+          to: any/address
+          approve:
+            - roles/admin
+            - users/joesmith
+          approvals: 2
+          version: 1
+        - name: transfer-rules/sent-to-default-address
+          variant: allow
+          asset: chains/BTC/assets/BTC
+          from: accounts/x
+          to: accounts/coinbase/defaults
+          version: 1
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/StakingRuleName'
+              description: OUTPUT ONLY.
+            variant:
+              $ref: '#/components/schemas/RuleVariant'
+            state:
+              $ref: '#/components/schemas/DisableableState'
+              description: OUTPUT ONLY.
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/StakingRuleData'
+      x-tags:
+        - Resource
+    StakingRuleName:
+      type: string
+      title: StakingRuleName
+      pattern: 'staking-rules/[A-Za-z0-9-_]+'
+      examples:
+        - staking-rules/freeze-ETH
+      x-tags:
+        - Name
+    StakingRuleData:
+      title: StakingRuleData
+      allOf:
+        - $ref: '#/components/schemas/StakingFilter'
+        - $ref: '#/components/schemas/QuorumFilter'
+      x-tags:
+        - Data
+    StakingFilter:
+      type: object
+      title: StakingFilter
+      properties:
+        staking:
+          $ref: '#/components/schemas/StakingVariantFilter'
+          description: Must have at least one staking variant.
+          x-go-type: FlexibleArray
+        asset:
+          $ref: '#/components/schemas/AssetFilter'
+        amount:
+          $ref: '#/components/schemas/AmountFilter'
+        from:
+          $ref: '#/components/schemas/AddressFilter'
+        to:
+          $ref: '#/components/schemas/AddressFilter'
+      required:
+        - asset
+        - from
+        - to
+      x-tags:
+        - Filter
+    StakingVariantFilter:
+      title: StakingVariantFilter
+      oneOf:
+        - $ref: '#/components/schemas/StakingVariant'
+        - type: array
+          items:
+            $ref: '#/components/schemas/StakingVariant'
+      x-go-type: FlexibleArray
+      x-tags:
+        - Filter
+    TagPage:
+      title: TagPage
+      allOf:
+        - type: object
+          properties:
+            tags:
+              type: array
+              items:
+                $ref: '#/components/schemas/Tag'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    Tag:
+      title: Tag
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/TagName'
+        - $ref: '#/components/schemas/TagData'
+        - $ref: '#/components/schemas/Metadata'
+      x-tags:
+        - Resource
+    TagName:
+      type: string
+      title: TagName
+      pattern: 'tags/[A-Za-z0-9-_]+'
+      examples:
+        - tags/secure
+      x-tags:
+        - Name
+    TagData:
+      type: object
+      title: TagData
+      properties:
+        color:
+          type: string
+        resource:
+          $ref: '#/components/schemas/ResourceTypeFilter'
+      x-tags:
+        - Data
+    CallPage:
+      title: CallPage
+      allOf:
+        - type: object
+          properties:
+            calls:
+              type: array
+              items:
+                $ref: '#/components/schemas/Call'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    Call:
+      title: Call
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/CallName'
+            state:
+              $ref: '#/components/schemas/CallState'
+            variant:
+              $ref: '#/components/schemas/CallVariant'
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/CallData'
+      x-tags:
+        - Resource
+    CallState:
+      type: string
+      enum:
+        - active
+        - succeeded
+        - failed
+      title: CallState
+      description: 'In the `active` state, the subordinate resource is being processed, lookup its state for more details.'
+      x-tags:
+        - State
+    CallVariant:
+      type: string
+      enum:
+        - signature
+        - transaction
+      title: CallVariant
+      description: Call operations. The `signature` calls are not dangerous (not raw-signing).
+      x-tags:
+        - Variant
+    CallData:
+      type: object
+      title: CallData
+      description: |-
+        The call `method` determines the variants of `request` and `response` that are permissible.
+
+        | driver | method | request | response |
+        | ------ | ------ | ------- |----------|
+        | EVM | personal_sign | UnsignedMessage | signature |
+        | EVM | eth_signTypedData_v4 | Eip712TypedData | signature |
+        | EVM | eth_sendTransaction | UnsignedEvmTransaction | transaction |
+        | EVM | eth_signTransaction | UnsignedEvmTransaction | transaction |
+        | SVM | solana:signMessage | UnsignedMessage | signature |
+        | SVM | solana:signTransaction | UnsignedSvmTransaction | transaction |
+        | SVM | solana:signAndSendTransaction | UnsignedSvmTransaction | transaction |
+
+        The `method` must match the driver of the specified `chain`.
+
+        To determine the error causing a `failed` state, see the `error` field of the subordinate response resource.
+      properties:
+        address:
+          $ref: '#/components/schemas/AddressName'
+        origin:
+          $ref: '#/components/schemas/Origin'
+        method:
+          $ref: '#/components/schemas/CallMethod'
+        request:
+          $ref: '#/components/schemas/CallRequest'
+        parse:
+          $ref: '#/components/schemas/CallParse'
+        response:
+          $ref: '#/components/schemas/CallResponse'
+        to:
+          $ref: '#/components/schemas/OneOrMoreAddressNames'
+          description: '`OUTPUT_ONLY`.  This will output the contract address(es) that this call interacts with, if any.'
+      required:
+        - address
+        - method
+        - request
+      x-tags:
+        - Data
+    Origin:
+      type: string
+      title: Origin
+      description: 'Scheme, host, and port component of a URL'
+      examples:
+        - 'https://polymarket.com'
+      x-tags:
+        - Value
+    CallMethod:
+      type: string
+      enum:
+        - eth_sendTransaction
+        - eth_signTransaction
+        - personal_sign
+        - eth_signTypedData_v4
+        - 'solana:signIn'
+        - 'solana:signMessage'
+        - 'solana:signTransaction'
+        - 'solana:signAndSendTransaction'
+        - 'canton:accept'
+      title: CallMethod
+      x-tags:
+        - Value
+    CallRequest:
+      title: CallRequest
+      oneOf:
+        - $ref: '#/components/schemas/UnsignedMessage'
+          description: UnsignedMessage
+        - $ref: '#/components/schemas/UnsignedEvmTransaction'
+          description: UnsignedEvmTransaction
+        - $ref: '#/components/schemas/UnsignedSvmTransaction'
+          description: UnsignedSvmTransaction
+        - $ref: '#/components/schemas/Eip712TypedData'
+          description: Eip712TypedData
+      x-tags:
+        - Value
+    UnsignedMessage:
+      type: object
+      title: UnsignedMessage
+      properties:
+        message:
+          $ref: '#/components/schemas/Hex'
+      required:
+        - message
+      x-tags:
+        - Value
+    UnsignedEvmTransaction:
+      type: object
+      title: UnsignedEvmTransaction
+      properties:
+        amount:
+          $ref: '#/components/schemas/PositiveDecimal'
+        to:
+          $ref: '#/components/schemas/BlockchainAddress'
+        data:
+          $ref: '#/components/schemas/Hex'
+      required:
+        - to
+        - data
+      x-tags:
+        - Value
+    UnsignedSvmTransaction:
+      type: object
+      title: UnsignedSvmTransaction
+      properties:
+        transaction:
+          $ref: '#/components/schemas/Hex'
+      required:
+        - transaction
+      x-tags:
+        - Value
+    Eip712TypedData:
+      type: object
+      title: Eip712TypedData
+      properties:
+        domain:
+          $ref: '#/components/schemas/Eip712Domain'
+        types:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Eip712DomainTypes'
+        primaryType:
+          type: string
+        message:
+          type: object
+      required:
+        - domain
+        - types
+        - primaryType
+        - message
+      x-tags:
+        - Value
+    Eip712Domain:
+      type: object
+      title: Eip712Domain
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        chainId:
+          $ref: '#/components/schemas/EthHex'
+        verifyingContract:
+          $ref: '#/components/schemas/BlockchainAddress'
+        salt:
+          $ref: '#/components/schemas/EthHex'
+      x-tags:
+        - Value
+    EthHex:
+      $ref: '#/components/schemas/NumberOrString'
+      title: EthHex
+      description: |-
+        Ethereum has a few parameters that are "binary data" (possibly numerical, such as the u64 chain ID) but accept multiple input encodings:
+        - `<number>` (if it fits in a JavaScript number)
+        - `"<number>"` (if it fits in a JavaScript number)
+        - `"0x<hex>"`
+
+        The last one is in some sense the most general and hence canonical encoding.
+
+        In clients and servers, such values should be handled (compared, stored...) as byte arrays
+
+        Note that Ethereum is always big-endian.
+      x-tags:
+        - Value
+    NumberOrString:
+      title: NumberOrString
+      description: 'ETH chain ID are sometimes sent as numbers, or as strings (sometimes decimal, sometimes hexadecimal with 0x prefix)'
+      examples:
+        - 1
+        - '0x1'
+      oneOf:
+        - type: number
+        - type: string
+      x-tags:
+        - Value
+    Eip712DomainTypes:
+      type: array
+      title: Eip712DomainTypes
+      items:
+        $ref: '#/components/schemas/Eip712DomainType'
+      x-tags:
+        - Value
+    Eip712DomainType:
+      type: object
+      title: Eip712DomainType
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+      required:
+        - name
+        - type
+      x-tags:
+        - Value
+    CallParse:
+      type: object
+      title: CallParse
+      properties:
+        from:
+          $ref: '#/components/schemas/OneOrMoreAddressNames'
+        to:
+          $ref: '#/components/schemas/OneOrMoreAddressNames'
+      required:
+        - from
+        - to
+      x-tags:
+        - Value
+    CallResponse:
+      title: CallResponse
+      description: |-
+        Names the subordinate `signature` (for signing calls such as `personal_sign` and `solana:signMessage`) or `transaction` (for transactioning calls such as `eth_sendTransaction`, `eth_signTransaction`, `solana:signTransaction`, `solana:signAndSendTransaction`).
+
+        Exactly one of these fields must be set.
+      oneOf:
+        - $ref: '#/components/schemas/CallSignature'
+          description: Signature
+        - $ref: '#/components/schemas/CallTransaction'
+          description: Transaction
+      x-tags:
+        - Value
+    CallSignature:
+      type: object
+      title: CallSignature
+      properties:
+        signature:
+          $ref: '#/components/schemas/SignatureName'
+      x-tags:
+        - Value
+    CallTransaction:
+      type: object
+      title: CallTransaction
+      properties:
+        transaction:
+          $ref: '#/components/schemas/TransactionName'
+      x-tags:
+        - Value
+    HostPage:
+      title: HostPage
+      allOf:
+        - type: object
+          properties:
+            hosts:
+              type: array
+              items:
+                $ref: '#/components/schemas/Host'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    Host:
+      title: Host
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/HostName'
+            state:
+              $ref: '#/components/schemas/BasicState'
+        - $ref: '#/components/schemas/HostData'
+        - $ref: '#/components/schemas/Metadata'
+      x-tags:
+        - Resource
+    HostName:
+      type: string
+      title: HostName
+      pattern: 'hosts/[A-Za-z0-9-_]+'
+      examples:
+        - hosts/mMkv1VAXSvsaJF2pEyPyZ3
+      x-tags:
+        - Name
+    HostData:
+      type: object
+      title: HostData
+      properties:
+        software:
+          $ref: '#/components/schemas/SoftwareVersion'
+        block:
+          $ref: '#/components/schemas/Block'
+      x-tags:
+        - Data
+    CallRulePage:
+      title: CallRulePage
+      allOf:
+        - type: object
+          properties:
+            call-rules:
+              $ref: '#/components/schemas/CallRule'
+        - $ref: '#/components/schemas/Pagination'
+      x-tags:
+        - Page
+    CallRule:
+      title: CallRule
+      description: |
+        This is analogous to transfer rules, except the `to` address must be a `validator` address.
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/CallRuleName'
+              description: OUTPUT ONLY.
+            variant:
+              $ref: '#/components/schemas/RuleVariant'
+            state:
+              $ref: '#/components/schemas/DisableableState'
+              description: OUTPUT ONLY.
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/CallRuleData'
+      x-tags:
+        - Resource
+    CallRuleName:
+      type: string
+      title: CallRuleName
+      pattern: 'call-rules/[A-Za-z0-9-_]+'
+      examples:
+        - call-rules/freeze-ETH
+      x-tags:
+        - Name
+    CallRuleData:
+      title: CallRuleData
+      allOf:
+        - $ref: '#/components/schemas/CallFilter'
+        - $ref: '#/components/schemas/QuorumFilter'
+      x-tags:
+        - Data
+    CallFilter:
+      title: CallFilter
+      allOf:
+        - type: object
+          properties:
+            call:
+              $ref: '#/components/schemas/CallVariantFilter'
+            method:
+              $ref: '#/components/schemas/MethodFilter'
+        - $ref: '#/components/schemas/ParseFilter'
+      x-tags:
+        - Filter
+    CallVariantFilter:
+      title: CallVariantFilter
+      oneOf:
+        - $ref: '#/components/schemas/CallVariant'
+        - type: array
+          items:
+            $ref: '#/components/schemas/CallVariant'
+      x-go-type: FlexibleArray
+      x-tags:
+        - Filter
+    MethodFilter:
+      title: MethodFilter
+      oneOf:
+        - $ref: '#/components/schemas/CallMethod'
+        - type: array
+          items:
+            $ref: '#/components/schemas/CallMethod'
+      x-deprecated: true
+      x-go-type: FlexibleArray
+      x-tags:
+        - Filter
+    ParseFilter:
+      type: object
+      title: ParseFilter
+      properties:
+        from:
+          $ref: '#/components/schemas/AddressFilter'
+        to:
+          $ref: '#/components/schemas/AddressFilter'
+      required:
+        - from
+      x-tags:
+        - Filter

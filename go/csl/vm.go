@@ -76,7 +76,7 @@ type Var struct {
 // VMConfig holds runtime configuration for the VM.
 type VMConfig struct {
 	AllowFail    bool
-	UntilTimeout *int  // seconds, nil = infinity
+	UntilTimeout *int // seconds, nil = infinity
 	ListDeleted  bool
 	DisplayStrip bool
 }
@@ -97,16 +97,21 @@ type VM struct {
 	// Populated by create commands when id() is used, allowing body values
 	// to auto-qualify bare nonce strings to full resource names.
 	nonceMap map[string]string
+
+	// freshResourceCache records resources whose cached JSON was deliberately
+	// synchronized after a write, avoiding immediate assertion races.
+	freshResourceCache map[string]time.Time
 }
 
 // NewVM creates a new VM with the given client.
 func NewVM(c *client.Client) *VM {
 	return &VM{
-		Client:     c,
-		Vars:       make(map[string]*Var),
-		TreasuryID: c.TreasuryID,
-		startTimes: make(map[string]time.Time),
-		nonceMap:   make(map[string]string),
+		Client:             c,
+		Vars:               make(map[string]*Var),
+		TreasuryID:         c.TreasuryID,
+		startTimes:         make(map[string]time.Time),
+		nonceMap:           make(map[string]string),
+		freshResourceCache: make(map[string]time.Time),
 	}
 }
 
@@ -466,11 +471,12 @@ func (vm *VM) execCreate(c Create, direct bool) (*Var, error) {
 	if c.ResourceType == ResourceClientKey {
 		return vm.execCreateClientKey(c)
 	}
+	vm.invalidateResourceSnapshots()
 
 	resourceType := capitalizeResourceType(c.ResourceType)
 	id := ""
 	if c.Id != nil {
-		resolved, err := vm.resolveStringOrVar(*c.Id)
+		resolved, err := vm.resolveIDStringOrVar(*c.Id)
 		if err != nil {
 			return nil, fmt.Errorf("create: resolving id: %w", err)
 		}
@@ -484,7 +490,7 @@ func (vm *VM) execCreate(c Create, direct bool) (*Var, error) {
 	}
 	parent := ""
 	if c.Parent != nil {
-		resolved, err := vm.resolveStringOrVar(*c.Parent)
+		resolved, err := vm.resolveIDStringOrVar(*c.Parent)
 		if err != nil {
 			return nil, fmt.Errorf("create: resolving parent: %w", err)
 		}
@@ -530,7 +536,7 @@ func (vm *VM) execCreate(c Create, direct bool) (*Var, error) {
 func (vm *VM) execCreateClientKey(c Create) (*Var, error) {
 	id := ""
 	if c.Id != nil {
-		resolved, err := vm.resolveStringOrVar(*c.Id)
+		resolved, err := vm.resolveIDStringOrVar(*c.Id)
 		if err != nil {
 			return nil, fmt.Errorf("create client-key: resolving id: %w", err)
 		}
@@ -619,7 +625,7 @@ func (vm *VM) execPropose(c Propose) (*Var, error) {
 	resourceType := capitalizeResourceType(c.ResourceType)
 	id := ""
 	if c.Id != nil {
-		resolved, err := vm.resolveStringOrVar(*c.Id)
+		resolved, err := vm.resolveIDStringOrVar(*c.Id)
 		if err != nil {
 			return nil, fmt.Errorf("propose: resolving id: %w", err)
 		}
@@ -627,7 +633,7 @@ func (vm *VM) execPropose(c Propose) (*Var, error) {
 	}
 	parent := ""
 	if c.Parent != nil {
-		resolved, err := vm.resolveStringOrVar(*c.Parent)
+		resolved, err := vm.resolveIDStringOrVar(*c.Parent)
 		if err != nil {
 			return nil, fmt.Errorf("propose: resolving parent: %w", err)
 		}
@@ -653,7 +659,145 @@ func (vm *VM) execPropose(c Propose) (*Var, error) {
 }
 
 func (vm *VM) doCreate(resourceType, id, parent string, body interface{}) (string, error) {
-	return vm.Client.CreateWithParent(resourceType, id, parent, body)
+	switch resourceType {
+	case "Account":
+		req, err := decodeTypedBody[client.CreateAccountRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateAccount(id, req)
+	case "AccessRule":
+		req, err := decodeTypedBody[client.CreateAccessRuleRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateAccessRule(id, req)
+	case "Address":
+		req, err := decodeTypedBody[client.CreateAddressRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateAddress(parent, id, req)
+	case "Asset":
+		req, err := decodeTypedBody[client.CreateAssetRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateAsset(parent, id, req)
+	case "Chain":
+		req, err := decodeTypedBody[client.CreateChainRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateChain(id, req)
+	case "Call":
+		req, err := decodeTypedBody[client.CreateCallRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateCall(parent, id, req)
+	case "CallRule":
+		req, err := decodeTypedBody[client.CreateCallRuleRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateCallRule(id, req)
+	case "Credential":
+		req, err := decodeTypedBody[client.CreateCredentialRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateCredential(parent, id, req)
+	case "Feature":
+		req, err := decodeTypedBody[client.CreateFeatureRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateFeature(id, req)
+	case "Key":
+		req, err := decodeTypedBody[client.CreateKeyRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateKey(id, req)
+	case "Role":
+		req, err := decodeTypedBody[client.CreateRoleRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateRole(id, req)
+	case "Signature":
+		req, err := decodeTypedBody[client.CreateSignatureRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateSignature(id, req)
+	case "SoftwareUpdate":
+		req, err := decodeTypedBody[client.CreateSoftwareUpdateRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateSoftwareUpdate(id, req)
+	case "Staking":
+		req, err := decodeTypedBody[client.CreateStakingRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateStaking(id, req)
+	case "StakingRule":
+		req, err := decodeTypedBody[client.CreateStakingRuleRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateStakingRule(id, req)
+	case "Symbol":
+		req, err := decodeTypedBody[client.CreateSymbolRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateSymbol(parent, id, req)
+	case "Tag":
+		req, err := decodeTypedBody[client.CreateTagRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateTag(id, req)
+	case "Transfer":
+		req, err := decodeTypedBody[client.CreateTransferRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateTransfer(id, req)
+	case "TransferRule":
+		req, err := decodeTypedBody[client.CreateTransferRuleRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateTransferRule(id, req)
+	case "User":
+		req, err := decodeTypedBody[client.CreateUserRequest](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.CreateUser(id, req)
+	default:
+		return vm.Client.CreateWithParent(resourceType, id, parent, body)
+	}
+}
+
+func decodeTypedBody[T any](body interface{}) (T, error) {
+	var out T
+	if body == nil {
+		return out, nil
+	}
+	b, err := json.Marshal(body)
+	if err != nil {
+		return out, fmt.Errorf("marshaling typed body: %w", err)
+	}
+	if err := json.Unmarshal(b, &out); err != nil {
+		return out, fmt.Errorf("decoding typed body: %w", err)
+	}
+	return out, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -665,6 +809,7 @@ func (vm *VM) execUpdate(u Update, direct bool) (*Var, error) {
 	if err != nil {
 		return nil, fmt.Errorf("update: resolving target: %w", err)
 	}
+	vm.invalidateResourceSnapshots()
 
 	// GET the current resource so we can include required fields for PUT.
 	var current map[string]interface{}
@@ -688,7 +833,7 @@ func (vm *VM) execUpdate(u Update, direct bool) (*Var, error) {
 		merged[k] = v
 	}
 
-	opName, err := vm.Client.Update(resourceName, merged)
+	opName, err := vm.doUpdate(resourceName, merged)
 	if err != nil {
 		return nil, fmt.Errorf("update %s: %w", resourceName, err)
 	}
@@ -696,7 +841,298 @@ func (vm *VM) execUpdate(u Update, direct bool) (*Var, error) {
 	if direct {
 		return &Var{Type: VarOperation, Name: opName, Value: opName}, nil
 	}
-	return vm.pollAndResolve(opName)
+	result, err := vm.pollAndResolve(opName)
+	if err != nil {
+		return nil, err
+	}
+	if expectedState := expectedTransactionUpdateState(newData); resourceKindFromName(resourceName) == "Transaction" && expectedState != "" {
+		result, err = vm.cacheTransactionUpdateSnapshot(resourceName, expectedState, merged, result)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+func expectedTransactionUpdateState(data map[string]interface{}) string {
+	if _, ok := data["input"]; ok {
+		return "signing"
+	}
+	if confirmations, ok := data["confirmations"]; ok {
+		count := confirmationCount(confirmations)
+		if errorStatus(data["error"]) == "Reverted" {
+			return "reverted"
+		}
+		if count <= 0 {
+			return "submitting"
+		}
+		if count >= 100 {
+			return "succeeded"
+		}
+		return "finalizing"
+	}
+	return ""
+}
+
+func errorStatus(v interface{}) string {
+	m, ok := v.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	status, _ := m["status"].(string)
+	return status
+}
+
+func confirmationCount(v interface{}) int64 {
+	switch n := v.(type) {
+	case int:
+		return int64(n)
+	case int64:
+		return n
+	case float64:
+		return int64(n)
+	case string:
+		i, _ := strconv.ParseInt(n, 10, 64)
+		return i
+	default:
+		return 0
+	}
+}
+
+func (vm *VM) cacheTransactionUpdateSnapshot(transactionName, expectedState string, merged map[string]interface{}, result *Var) (*Var, error) {
+	txObj, err := vm.getResourceObject(transactionName, merged)
+	if err != nil {
+		return result, err
+	}
+	txObj["state"] = expectedState
+	txRaw, err := json.Marshal(txObj)
+	if err != nil {
+		return result, fmt.Errorf("caching %s after transaction update: %w", transactionName, err)
+	}
+	vm.cacheResourceSnapshot(transactionName, txRaw)
+	if result != nil && result.Name == transactionName {
+		result.Value = json.RawMessage(txRaw)
+	}
+
+	origin, _ := txObj["origin"].(string)
+	if origin == "" || !strings.HasPrefix(origin, "transfers/") {
+		return result, nil
+	}
+	originObj, err := vm.getResourceObject(origin, nil)
+	if err != nil {
+		return result, err
+	}
+	originObj["state"] = expectedState
+	originRaw, err := json.Marshal(originObj)
+	if err != nil {
+		return result, fmt.Errorf("caching %s after transaction update: %w", origin, err)
+	}
+	vm.cacheResourceSnapshot(origin, originRaw)
+	return result, nil
+}
+
+func (vm *VM) getResourceObject(resourceName string, fallback map[string]interface{}) (map[string]interface{}, error) {
+	raw, err := vm.Client.GetJSON("/v1/" + resourceName)
+	if err != nil {
+		if fallback == nil {
+			return nil, fmt.Errorf("refreshing %s after transaction update: %w", resourceName, err)
+		}
+		obj := make(map[string]interface{}, len(fallback))
+		for k, v := range fallback {
+			obj[k] = v
+		}
+		return obj, nil
+	}
+	var obj map[string]interface{}
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return nil, fmt.Errorf("decoding %s after transaction update: %w", resourceName, err)
+	}
+	return obj, nil
+}
+
+func (vm *VM) cacheResourceSnapshot(resourceName string, raw json.RawMessage) {
+	for _, v := range vm.Vars {
+		if v != nil && v.Type == VarResource && v.Name == resourceName {
+			v.Value = raw
+		}
+	}
+	vm.freshResourceCache[resourceName] = time.Now()
+}
+
+func (vm *VM) doUpdate(resourceName string, body interface{}) (string, error) {
+	switch resourceKindFromName(resourceName) {
+	case "Account":
+		req, err := decodeTypedBody[types.Account](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateAccount(resourceName, req)
+	case "AccessRule":
+		req, err := decodeTypedBody[types.AccessRule](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateAccessRule(resourceName, req)
+	case "Address":
+		req, err := decodeTypedBody[types.Address](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateAddress(resourceName, req)
+	case "Asset":
+		req, err := decodeTypedBody[types.Asset](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateAsset(resourceName, req)
+	case "Chain":
+		req, err := decodeTypedBody[types.Chain](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateChain(resourceName, req)
+	case "Call":
+		req, err := decodeTypedBody[types.Call](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateCall(resourceName, req)
+	case "CallRule":
+		req, err := decodeTypedBody[types.CallRule](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateCallRule(resourceName, req)
+	case "Credential":
+		req, err := decodeTypedBody[types.Credential](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateCredential(resourceName, req)
+	case "Feature":
+		req, err := decodeTypedBody[types.Feature](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateFeature(resourceName, req)
+	case "Key":
+		req, err := decodeTypedBody[types.Key](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateKey(resourceName, req)
+	case "Role":
+		req, err := decodeTypedBody[types.Role](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateRole(resourceName, req)
+	case "Signature":
+		req, err := decodeTypedBody[types.Signature](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateSignature(resourceName, req)
+	case "SoftwareUpdate":
+		req, err := decodeTypedBody[types.SoftwareUpdate](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateSoftwareUpdate(resourceName, req)
+	case "Staking":
+		req, err := decodeTypedBody[types.Staking](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateStaking(resourceName, req)
+	case "StakingRule":
+		req, err := decodeTypedBody[types.StakingRule](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateStakingRule(resourceName, req)
+	case "Symbol":
+		req, err := decodeTypedBody[types.Symbol](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateSymbol(resourceName, req)
+	case "Tag":
+		req, err := decodeTypedBody[types.Tag](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateTag(resourceName, req)
+	case "Transfer":
+		req, err := decodeTypedBody[types.Transfer](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateTransfer(resourceName, req)
+	case "TransferRule":
+		req, err := decodeTypedBody[types.TransferRule](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateTransferRule(resourceName, req)
+	case "User":
+		req, err := decodeTypedBody[types.User](body)
+		if err != nil {
+			return "", err
+		}
+		return vm.Client.UpdateUser(resourceName, req)
+	default:
+		return vm.Client.Update(resourceName, body)
+	}
+}
+
+func resourceKindFromName(resourceName string) string {
+	switch {
+	case strings.HasPrefix(resourceName, "accounts/"):
+		return "Account"
+	case strings.HasPrefix(resourceName, "access-rules/"):
+		return "AccessRule"
+	case strings.Contains(resourceName, "/addresses/"):
+		return "Address"
+	case strings.Contains(resourceName, "/assets/"):
+		return "Asset"
+	case strings.HasPrefix(resourceName, "chains/") && strings.Count(resourceName, "/") == 1:
+		return "Chain"
+	case strings.Contains(resourceName, "/calls/"):
+		return "Call"
+	case strings.HasPrefix(resourceName, "call-rules/"):
+		return "CallRule"
+	case strings.Contains(resourceName, "/credentials/"):
+		return "Credential"
+	case strings.HasPrefix(resourceName, "features/"):
+		return "Feature"
+	case strings.HasPrefix(resourceName, "keys/"):
+		return "Key"
+	case strings.HasPrefix(resourceName, "roles/"):
+		return "Role"
+	case strings.HasPrefix(resourceName, "signatures/"):
+		return "Signature"
+	case strings.HasPrefix(resourceName, "software-updates/"):
+		return "SoftwareUpdate"
+	case strings.HasPrefix(resourceName, "stakings/"):
+		return "Staking"
+	case strings.HasPrefix(resourceName, "staking-rules/"):
+		return "StakingRule"
+	case strings.Contains(resourceName, "/symbols/"):
+		return "Symbol"
+	case strings.HasPrefix(resourceName, "tags/"):
+		return "Tag"
+	case strings.HasPrefix(resourceName, "transfers/"):
+		return "Transfer"
+	case strings.HasPrefix(resourceName, "transfer-rules/"):
+		return "TransferRule"
+	case strings.HasPrefix(resourceName, "transactions/"):
+		return "Transaction"
+	case strings.HasPrefix(resourceName, "users/") && strings.Count(resourceName, "/") == 1:
+		return "User"
+	default:
+		return ""
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -708,6 +1144,7 @@ func (vm *VM) execDelete(d Delete, direct bool) (*Var, error) {
 	if err != nil {
 		return nil, fmt.Errorf("delete: resolving target: %w", err)
 	}
+	vm.invalidateResourceSnapshots()
 
 	// Client keys are local (keyring), not API resources
 	if strings.HasPrefix(resourceName, "client-keys/") {
@@ -830,6 +1267,7 @@ func (vm *VM) execCustom(c Custom, direct bool) (*Var, error) {
 	if err != nil {
 		return nil, fmt.Errorf("custom: resolving target: %w", err)
 	}
+	vm.invalidateResourceSnapshots()
 
 	var payload interface{}
 	if c.Payload != nil {
@@ -853,6 +1291,10 @@ func (vm *VM) execCustom(c Custom, direct bool) (*Var, error) {
 		return &Var{Type: VarOperation, Name: opName, Value: opName}, nil
 	}
 	return vm.pollAndResolve(opName)
+}
+
+func (vm *VM) invalidateResourceSnapshots() {
+	clear(vm.freshResourceCache)
 }
 
 // ---------------------------------------------------------------------------
@@ -956,6 +1398,8 @@ func (vm *VM) execAssert(a Assert) error {
 // ---------------------------------------------------------------------------
 
 func (vm *VM) execUntil(u Until) error {
+	vm.invalidateResourceSnapshots()
+
 	timeout := vm.Config.UntilTimeout
 	var deadline *time.Time
 	if timeout != nil {
@@ -1253,6 +1697,11 @@ func (vm *VM) resolveVariableRef(vr VariableRef) (string, error) {
 	if v.Type == VarResource && v.Name != "" {
 		// Client keys are local (not API resources), navigate stored JSON directly
 		if strings.HasPrefix(v.Name, "client-keys/") {
+			if raw, ok := v.Value.(json.RawMessage); ok {
+				return navigateJSON(raw, vr.Path)
+			}
+		}
+		if cachedAt, ok := vm.freshResourceCache[v.Name]; ok && time.Since(cachedAt) < 2*time.Second {
 			if raw, ok := v.Value.(json.RawMessage); ok {
 				return navigateJSON(raw, vr.Path)
 			}
@@ -2194,22 +2643,13 @@ func (vm *VM) resolveTarget(pov PartialOrVariable) (string, error) {
 		return vm.varToString(v), nil
 	}
 
-	// Resolve any variable references in ID and parent
-	id := pov.Id
-	if strings.HasPrefix(id, "$") {
-		resolved, err := vm.resolveStringOrVar(id)
-		if err != nil {
-			return "", err
-		}
-		id = resolved
+	id, err := vm.resolveIDStringOrVar(pov.Id)
+	if err != nil {
+		return "", err
 	}
-	parent := pov.Parent
-	if strings.HasPrefix(parent, "$") {
-		resolved, err := vm.resolveStringOrVar(parent)
-		if err != nil {
-			return "", err
-		}
-		parent = resolved
+	parent, err := vm.resolveIDStringOrVar(pov.Parent)
+	if err != nil {
+		return "", err
 	}
 
 	return vm.buildResourceName(pov.ResourceType, parent, id, pov.Extension), nil
@@ -2385,6 +2825,9 @@ func (vm *VM) resolveDataMap(data map[string]interface{}) (map[string]interface{
 		if s, ok := resolved.(string); ok && s != "" && !strings.Contains(s, "/") {
 			resolved = qualifyBodyField(k, s)
 		}
+		if k == "tag" {
+			resolved = qualifyTagFilter(resolved)
+		}
 		// Handle dotted keys: "nested.key" -> nested map
 		setNestedValue(result, k, resolved)
 	}
@@ -2403,6 +2846,40 @@ func qualifyBodyField(field, value string) interface{} {
 	default:
 		return value
 	}
+}
+
+func qualifyTagFilter(value interface{}) interface{} {
+	switch v := value.(type) {
+	case string:
+		return qualifyTagCombination(v)
+	case []interface{}:
+		qualified := make([]string, 0, len(v))
+		for _, item := range v {
+			s, ok := item.(string)
+			if !ok {
+				return value
+			}
+			qualified = append(qualified, qualifyTagCombination(s))
+		}
+		if len(qualified) == 1 {
+			return qualified[0]
+		}
+		return qualified
+	default:
+		return value
+	}
+}
+
+func qualifyTagCombination(s string) string {
+	parts := strings.Split(s, " AND ")
+	for i, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" && !strings.HasPrefix(part, "tags/") {
+			part = "tags/" + part
+		}
+		parts[i] = part
+	}
+	return strings.Join(parts, " AND ")
 }
 
 func (vm *VM) resolveDataValue(v interface{}) (interface{}, error) {
@@ -2495,6 +2972,9 @@ func (vm *VM) resolveInlineTable(tbl *InlineTable) (map[string]interface{}, erro
 		val, err := vm.resolveValueToInterface(entry.Value)
 		if err != nil {
 			return nil, fmt.Errorf("resolving table entry %q: %w", entry.Key, err)
+		}
+		if entry.Key == "tag" {
+			val = qualifyTagFilter(val)
 		}
 		setNestedValue(result, entry.Key, val)
 	}
@@ -2634,7 +3114,6 @@ func (vm *VM) pollDeleteOperation(opName string, deletedResource string) (*Var, 
 	return &Var{Type: VarResource, Name: deletedResource, Value: json.RawMessage(raw)}, nil
 }
 
-
 // ---------------------------------------------------------------------------
 // Var helpers
 // ---------------------------------------------------------------------------
@@ -2699,6 +3178,18 @@ func (vm *VM) resolveStringOrVar(s string) (string, error) {
 			return v.Name, nil
 		}
 		return vm.varToString(v), nil
+	}
+	return s, nil
+}
+
+// resolveIDStringOrVar resolves parsed resource IDs and parents. Only explicit
+// "$id" strings are variable references; bare tokens are literal resource IDs.
+func (vm *VM) resolveIDStringOrVar(s string) (string, error) {
+	if s == "" {
+		return "", nil
+	}
+	if strings.HasPrefix(s, "$") {
+		return vm.resolveStringOrVar(s)
 	}
 	return s, nil
 }
@@ -2782,4 +3273,3 @@ func capitalizeResourceType(rt ResourceType) string {
 	}
 	return strings.Join(parts, "-")
 }
-

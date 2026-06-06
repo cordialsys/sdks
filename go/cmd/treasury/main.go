@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/cordialsys/sdk-go/csl"
@@ -65,19 +67,24 @@ Commands:
 Options:
   -a, --api <url>       API base URL (default: http://localhost:8777)
   -t, --treasury <id>   Treasury ID
+  --api-key <key>       API key (or TREASURY_API_KEY)
   -s, --sign-with <key> Keyring key name to sign with
   -f, --file <path>     Script file to run (for script/test commands)
-  --suite <dir>         Test suite directory (for test command)`)
+  --suite <dir>         Test suite directory (for test command)
+  --filter <text>       Only run test files whose path contains text
+  --parse-only          Parse CSL tests without executing them`)
 }
 
 // parseFlags extracts common flags from os.Args[2:]
 type flags struct {
 	apiURL    string
+	apiKey    string
 	treasury  string
 	signWith  string
 	file      string
 	suite     string
 	filter    string
+	parseOnly bool
 	remaining []string
 }
 
@@ -89,6 +96,7 @@ func parseFlags() flags {
 		f.apiURL = "http://localhost:8777"
 	}
 	f.treasury = os.Getenv("TREASURY_ID")
+	f.apiKey = os.Getenv("TREASURY_API_KEY")
 
 	args := os.Args[2:]
 	for i := 0; i < len(args); i++ {
@@ -101,6 +109,11 @@ func parseFlags() flags {
 		case "-t", "--treasury":
 			if i+1 < len(args) {
 				f.treasury = args[i+1]
+				i++
+			}
+		case "--api-key":
+			if i+1 < len(args) {
+				f.apiKey = args[i+1]
 				i++
 			}
 		case "-s", "--sign-with":
@@ -123,6 +136,8 @@ func parseFlags() flags {
 				f.filter = args[i+1]
 				i++
 			}
+		case "--parse-only":
+			f.parseOnly = true
 		default:
 			f.remaining = append(f.remaining, args[i])
 		}
@@ -133,22 +148,19 @@ func parseFlags() flags {
 func makeClient(f flags) *client.Client {
 	treasuryID := f.treasury
 	if treasuryID == "" {
-		// Try to auto-discover treasury ID
-		c := client.NewClient(f.apiURL, "")
-		raw, err := c.GetJSON("treasury")
-		if err == nil {
-			var t struct {
-				Name string `json:"name"`
-			}
-			if json.Unmarshal(raw, &t) == nil && t.Name != "" {
-				parts := strings.Split(t.Name, "/")
-				if len(parts) >= 2 {
-					treasuryID = parts[1]
-				}
-			}
+		var err error
+		treasuryID, err = client.LookupTreasuryID(context.Background(), f.apiURL, f.apiKey)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error discovering treasury id: %v\n", err)
+			os.Exit(1)
 		}
 	}
-	return client.NewClient(f.apiURL, treasuryID)
+	c, err := client.NewClient(treasuryID, client.WithBaseURL(f.apiURL), client.WithAPIKey(f.apiKey))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error creating client: %v\n", err)
+		os.Exit(1)
+	}
+	return c
 }
 
 func makeVM(f flags) *csl.VM {
@@ -214,16 +226,7 @@ func runTest() {
 	var files []string
 
 	if f.suite != "" {
-		entries, err := os.ReadDir(f.suite)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error reading suite directory %s: %v\n", f.suite, err)
-			os.Exit(1)
-		}
-		for _, e := range entries {
-			if !e.IsDir() && strings.HasSuffix(e.Name(), ".csl") {
-				files = append(files, f.suite+"/"+e.Name())
-			}
-		}
+		files = append(files, collectCSLFiles(f.suite)...)
 	}
 	if f.file != "" {
 		files = append(files, f.file)
@@ -236,16 +239,7 @@ func runTest() {
 				os.Exit(1)
 			}
 			if info.IsDir() {
-				entries, err := os.ReadDir(arg)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "error reading directory %s: %v\n", arg, err)
-					os.Exit(1)
-				}
-				for _, e := range entries {
-					if !e.IsDir() && strings.HasSuffix(e.Name(), ".csl") {
-						files = append(files, arg+"/"+e.Name())
-					}
-				}
+				files = append(files, collectCSLFiles(arg)...)
 			} else {
 				files = append(files, arg)
 			}
@@ -254,6 +248,21 @@ func runTest() {
 
 	if len(files) == 0 {
 		fmt.Fprintln(os.Stderr, "no test files specified")
+		os.Exit(1)
+	}
+
+	if f.filter != "" {
+		filtered := files[:0]
+		for _, file := range files {
+			if strings.Contains(file, f.filter) {
+				filtered = append(filtered, file)
+			}
+		}
+		files = filtered
+	}
+
+	if len(files) == 0 {
+		fmt.Fprintln(os.Stderr, "no test files matched")
 		os.Exit(1)
 	}
 
@@ -281,6 +290,12 @@ func runTest() {
 			continue
 		}
 
+		if f.parseOnly {
+			fmt.Println("PASS")
+			passed++
+			continue
+		}
+
 		vm := makeVM(f)
 		if err := vm.Execute(prog); err != nil {
 			fmt.Printf("FAIL (%v)\n", err)
@@ -301,6 +316,26 @@ func runTest() {
 		}
 		os.Exit(1)
 	}
+}
+
+func collectCSLFiles(dir string) []string {
+	var files []string
+	if err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if strings.HasSuffix(d.Name(), ".csl") {
+			files = append(files, path)
+		}
+		return nil
+	}); err != nil {
+		fmt.Fprintf(os.Stderr, "error reading suite directory %s: %v\n", dir, err)
+		os.Exit(1)
+	}
+	return files
 }
 
 func runGet() {
@@ -497,6 +532,9 @@ func runConfig() {
 	f := parseFlags()
 	fmt.Printf("API URL:  %s\n", f.apiURL)
 	fmt.Printf("Treasury: %s\n", f.treasury)
+	if f.apiKey != "" {
+		fmt.Println("API key:  set")
+	}
 	if f.signWith != "" {
 		fmt.Printf("Sign with: %s\n", f.signWith)
 	}

@@ -42,6 +42,20 @@ type Set []string
 // DurationString represents a duration string like "10d", "3h", "30m".
 type DurationString string
 
+// AccountVariant is the account custody variant.
+//
+// The current OpenAPI schema reuses AddressVariant for account variants because
+// the allowed wire values are the same.
+type AccountVariant = AddressVariant
+
+const (
+	AccountVariantContract  AccountVariant = AddressVariantContract
+	AccountVariantExternal  AccountVariant = AddressVariantExternal
+	AccountVariantInternal  AccountVariant = AddressVariantInternal
+	AccountVariantShared    AccountVariant = AddressVariantShared
+	AccountVariantValidator AccountVariant = AddressVariantValidator
+)
+
 // FlexibleArray can be either a single value or an array.
 // When serializing, a single value is output as-is, and multiple values as an array.
 // When deserializing, both a single string and an array are accepted.

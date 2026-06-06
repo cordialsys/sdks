@@ -1,12 +1,14 @@
 // Package client provides a Go SDK client for the Treasury API.
 //
-// The client supports both read operations (unauthenticated GET requests) and
+// The client supports both read operations (GET requests) and
 // write operations (signed POST/PUT/DELETE requests using HTTP Message Signatures
 // per RFC 9421).
 //
 // Example usage:
 //
-//	c := client.NewClient("http://localhost:8777", "my-treasury")
+//	c, _ := client.NewClient("my-treasury",
+//		client.WithBaseURL("http://localhost:8777"),
+//	)
 //	identity, _ := client.LoadK256Identity("admin", privateKeyHex)
 //	c.SetIdentity(identity)
 //
@@ -19,6 +21,7 @@
 package client
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -33,17 +36,32 @@ import (
 	"github.com/cordialsys/sdk-go/treasury/types"
 )
 
+const DefaultBaseURL = "https://treasury.cordialapis.com/"
+
+// Signer is the generic signing interface used for signed write requests.
+type Signer interface {
+	PublicKey() string
+	SigningAlgorithm() SigningAlgorithm
+	SignHTTPMessage(signatureBase []byte) ([]byte, error)
+}
+
 // Client is the Treasury API client.
 type Client struct {
 	// BaseURL is the base URL of the Treasury API (e.g. "http://localhost:8777").
 	BaseURL string
 	// TreasuryID is the treasury identifier used in signed requests.
 	TreasuryID string
+	// APIKey is sent as Authorization: Bearer <api-key> on every request.
+	APIKey string
 	// HTTPClient is the HTTP client used for requests. If nil, http.DefaultClient is used.
 	HTTPClient *http.Client
 	// Identity is the signing identity for write operations. Must be set before calling
 	// write methods (Create, Update, Delete, Custom).
+	//
+	// Deprecated: use Signer or SetSigner for generic signing implementations.
 	Identity *Identity
+	// Signer is used to sign write requests. SetIdentity also sets this field.
+	Signer Signer
 }
 
 // ListOptions holds optional parameters for List requests.
@@ -78,18 +96,90 @@ func (e *APIError) Error() string {
 		e.StatusCode, e.Err.Code, e.Err.Status, e.Err.Message)
 }
 
-// NewClient creates a new Treasury API client.
-func NewClient(baseURL, treasuryID string) *Client {
-	return &Client{
-		BaseURL:    strings.TrimRight(baseURL, "/"),
-		TreasuryID: treasuryID,
-		HTTPClient: &http.Client{Timeout: 30 * time.Second},
+type clientConfig struct {
+	baseURL    string
+	apiKey     string
+	httpClient *http.Client
+	signer     Signer
+}
+
+// ClientOption configures a Treasury API client.
+type ClientOption func(*clientConfig)
+
+// WithBaseURL configures the Treasury API base URL. If omitted, the hosted
+// Treasury API is used.
+func WithBaseURL(baseURL string) ClientOption {
+	return func(cfg *clientConfig) {
+		cfg.baseURL = baseURL
 	}
+}
+
+// WithAPIKey configures the API key used for Authorization on every request.
+// Raw API keys are base64-encoded; already-base64 values are preserved.
+func WithAPIKey(apiKey string) ClientOption {
+	return func(cfg *clientConfig) {
+		cfg.apiKey = apiKey
+	}
+}
+
+// WithHTTPClient configures the HTTP client used for requests.
+func WithHTTPClient(httpClient *http.Client) ClientOption {
+	return func(cfg *clientConfig) {
+		cfg.httpClient = httpClient
+	}
+}
+
+// WithSigner configures the signer used for write requests.
+func WithSigner(signer Signer) ClientOption {
+	return func(cfg *clientConfig) {
+		cfg.signer = signer
+	}
+}
+
+// NewClient creates a new Treasury API client. treasuryID is required and is
+// sent as the Treasury header on every request.
+func NewClient(treasuryID string, opts ...ClientOption) (*Client, error) {
+	if treasuryID == "" {
+		return nil, fmt.Errorf("treasury id is required")
+	}
+	cfg := clientConfig{
+		baseURL: strings.TrimRight(DefaultBaseURL, "/"),
+	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(&cfg)
+		}
+	}
+	cfg.baseURL = normalizeBaseURL(cfg.baseURL)
+	if cfg.baseURL == "" {
+		cfg.baseURL = normalizeBaseURL(DefaultBaseURL)
+	}
+	apiKey := normalizeAPIKey(cfg.apiKey)
+	if apiKey == "" && isDefaultBaseURL(cfg.baseURL) {
+		return nil, fmt.Errorf("api key is required when using default Treasury API base URL %s", DefaultBaseURL)
+	}
+	httpClient := cfg.httpClient
+	if httpClient == nil {
+		httpClient = &http.Client{Timeout: 30 * time.Second}
+	}
+	return &Client{
+		BaseURL:    cfg.baseURL,
+		TreasuryID: treasuryID,
+		APIKey:     apiKey,
+		HTTPClient: httpClient,
+		Signer:     cfg.signer,
+	}, nil
 }
 
 // SetIdentity sets the signing identity used for write operations.
 func (c *Client) SetIdentity(identity *Identity) {
 	c.Identity = identity
+	c.Signer = identity
+}
+
+// SetSigner sets the signer used for write operations.
+func (c *Client) SetSigner(signer Signer) {
+	c.Signer = signer
 }
 
 // httpClient returns the HTTP client, defaulting to http.DefaultClient.
@@ -100,6 +190,113 @@ func (c *Client) httpClient() *http.Client {
 	return http.DefaultClient
 }
 
+func normalizeBaseURL(baseURL string) string {
+	return strings.TrimRight(strings.TrimSpace(baseURL), "/")
+}
+
+func isDefaultBaseURL(baseURL string) bool {
+	return normalizeBaseURL(baseURL) == normalizeBaseURL(DefaultBaseURL)
+}
+
+func normalizeAPIKey(apiKey string) string {
+	apiKey = strings.TrimSpace(apiKey)
+	if apiKey == "" {
+		return ""
+	}
+	if _, err := base64.StdEncoding.DecodeString(apiKey); err == nil {
+		return apiKey
+	}
+	return base64.StdEncoding.EncodeToString([]byte(apiKey))
+}
+
+func (c *Client) applyHeaders(req *http.Request) {
+	if c.TreasuryID != "" {
+		req.Header.Set("Treasury", c.TreasuryID)
+	}
+	if c.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+c.APIKey)
+	}
+}
+
+// LookupTreasuryID attempts to discover a treasury ID from the API base URL.
+// It first tries /v1/treasury, then falls back to listing /v1/treasuries.
+func LookupTreasuryID(ctx context.Context, baseURL string, apiKey string) (string, error) {
+	baseURL = normalizeBaseURL(baseURL)
+	if baseURL == "" {
+		baseURL = normalizeBaseURL(DefaultBaseURL)
+	}
+	apiKey = normalizeAPIKey(apiKey)
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+
+	for _, path := range []string{"/v1/treasury", "/v1/treasuries?page_size=1"} {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+path, nil)
+		if err != nil {
+			return "", fmt.Errorf("creating treasury lookup request: %w", err)
+		}
+		req.Header.Set("Accept", "application/json")
+		if apiKey != "" {
+			req.Header.Set("Authorization", "Bearer "+apiKey)
+		}
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			return "", fmt.Errorf("looking up treasury id: %w", err)
+		}
+		body, readErr := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if readErr != nil {
+			return "", fmt.Errorf("reading treasury lookup response: %w", readErr)
+		}
+		if resp.StatusCode >= 400 {
+			continue
+		}
+		if id := extractTreasuryID(body); id != "" {
+			return id, nil
+		}
+	}
+	return "", fmt.Errorf("could not discover treasury id from %s", baseURL)
+}
+
+func extractTreasuryID(body []byte) string {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(body, &obj); err != nil {
+		return ""
+	}
+	if name, ok := extractName(obj); ok {
+		return treasuryIDFromName(name)
+	}
+	for key, raw := range obj {
+		if key == "next_page_token" || key == "total_size" {
+			continue
+		}
+		var items []map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &items); err == nil && len(items) > 0 {
+			if name, ok := extractName(items[0]); ok {
+				return treasuryIDFromName(name)
+			}
+		}
+	}
+	return ""
+}
+
+func extractName(obj map[string]json.RawMessage) (string, bool) {
+	raw, ok := obj["name"]
+	if !ok {
+		return "", false
+	}
+	var name string
+	if err := json.Unmarshal(raw, &name); err != nil {
+		return "", false
+	}
+	return name, name != ""
+}
+
+func treasuryIDFromName(name string) string {
+	if strings.HasPrefix(name, "treasuries/") {
+		return strings.TrimPrefix(name, "treasuries/")
+	}
+	return name
+}
+
 // ---------------------------------------------------------------------------
 // Resource type to URL path mappings
 // ---------------------------------------------------------------------------
@@ -107,36 +304,36 @@ func (c *Client) httpClient() *http.Client {
 // resourceTypeToPathSegment maps a capitalized resource type name to its URL
 // path segment (the collection name used in the URL).
 var resourceTypeToPathSegment = map[string]string{
-	"Account":        "accounts",
-	"Address":        "addresses",
-	"Asset":          "assets",
-	"Credential":     "credentials",
-	"Symbol":         "symbols",
-	"Transfer":       "transfers",
-	"Staking":        "stakings",
-	"User":           "users",
-	"Key":            "keys",
-	"Role":           "roles",
-	"AccessRule":     "access-rules",
-	"Access-Rule":    "access-rules",
-	"TransferRule":   "transfer-rules",
-	"Transfer-Rule":  "transfer-rules",
-	"CallRule":       "call-rules",
-	"Call-Rule":      "call-rules",
-	"StakingRule":    "staking-rules",
-	"Staking-Rule":   "staking-rules",
-	"Operation":      "operations",
-	"Transaction":    "transactions",
-	"Treasury":       "treasuries",
-	"Tag":            "tags",
-	"Chain":          "chains",
-	"Feature":        "features",
-	"Call":           "calls",
-	"Signatory":      "signatories",
-	"Signer":         "signers",
-	"SoftwareUpdate": "software-updates",
+	"Account":         "accounts",
+	"Address":         "addresses",
+	"Asset":           "assets",
+	"Credential":      "credentials",
+	"Symbol":          "symbols",
+	"Transfer":        "transfers",
+	"Staking":         "stakings",
+	"User":            "users",
+	"Key":             "keys",
+	"Role":            "roles",
+	"AccessRule":      "access-rules",
+	"Access-Rule":     "access-rules",
+	"TransferRule":    "transfer-rules",
+	"Transfer-Rule":   "transfer-rules",
+	"CallRule":        "call-rules",
+	"Call-Rule":       "call-rules",
+	"StakingRule":     "staking-rules",
+	"Staking-Rule":    "staking-rules",
+	"Operation":       "operations",
+	"Transaction":     "transactions",
+	"Treasury":        "treasuries",
+	"Tag":             "tags",
+	"Chain":           "chains",
+	"Feature":         "features",
+	"Call":            "calls",
+	"Signatory":       "signatories",
+	"Signer":          "signers",
+	"SoftwareUpdate":  "software-updates",
 	"Software-Update": "software-updates",
-	"Host":           "hosts",
+	"Host":            "hosts",
 }
 
 // nestedResourceParentSegment maps resource types that are nested under a parent
@@ -211,9 +408,7 @@ func (c *Client) List(resourceType string, opts ListOptions) (*ListResponse, err
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
-	if c.TreasuryID != "" {
-		req.Header.Set("Treasury", c.TreasuryID)
-	}
+	c.applyHeaders(req)
 
 	resp, err := c.httpClient().Do(req)
 	if err != nil {
@@ -271,9 +466,7 @@ func (c *Client) GetJSON(path string) (json.RawMessage, error) {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
-	if c.TreasuryID != "" {
-		req.Header.Set("Treasury", c.TreasuryID)
-	}
+	c.applyHeaders(req)
 
 	resp, err := c.httpClient().Do(req)
 	if err != nil {
@@ -543,8 +736,12 @@ func (c *Client) PollOperation(operationName string) (*types.Operation, error) {
 // tag (e.g. "approve:OP_ID" or "cancel:OP_ID"; empty string for none).
 // Returns the operation name from the response on success.
 func (c *Client) Execute(method, path string, body interface{}, tag string) (string, error) {
-	if c.Identity == nil {
-		return "", fmt.Errorf("identity not set: call SetIdentity before write operations")
+	signer := c.Signer
+	if signer == nil {
+		signer = c.Identity
+	}
+	if signer == nil {
+		return "", fmt.Errorf("signer not set: call SetSigner or SetIdentity before write operations")
 	}
 
 	// 1. Serialize the body to JSON.
@@ -580,13 +777,13 @@ func (c *Client) Execute(method, path string, body interface{}, tag string) (str
 	// 4. Build the signature-params string.
 	now := time.Now().Unix()
 	nonce := generateNonce()
-	sigParams := buildSignatureParams(now, nonce, c.Identity.PublicKeyHex, string(c.Identity.Algorithm), tag)
+	sigParams := buildSignatureParams(now, nonce, signer.PublicKey(), string(signer.SigningAlgorithm()), tag)
 
 	// 5. Build the signature base string.
 	sigBase := buildSignatureBase(method, urlPath, urlQuery, contentDigest, c.TreasuryID, sigParams)
 
 	// 6. Sign the signature base.
-	sigBytes, err := c.Identity.SignHTTPMessage([]byte(sigBase))
+	sigBytes, err := signer.SignHTTPMessage([]byte(sigBase))
 	if err != nil {
 		return "", fmt.Errorf("signing request: %w", err)
 	}
@@ -602,9 +799,7 @@ func (c *Client) Execute(method, path string, body interface{}, tag string) (str
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "application/json")
 	httpReq.Header.Set("Content-Digest", contentDigest)
-	if c.TreasuryID != "" {
-		httpReq.Header.Set("Treasury", c.TreasuryID)
-	}
+	c.applyHeaders(httpReq)
 	httpReq.Header.Set("Signature-Input", "iam="+sigParams)
 	httpReq.Header.Set("Signature", signatureValue)
 

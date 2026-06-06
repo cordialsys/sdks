@@ -1563,8 +1563,8 @@ func TestCreate_WithVariableId(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected Create, got %T", cmd)
 	}
-	if c.Id == nil || *c.Id != "myid" {
-		t.Fatalf("expected id 'myid', got %v", c.Id)
+	if c.Id == nil || *c.Id != "$myid" {
+		t.Fatalf("expected id '$myid', got %v", c.Id)
 	}
 }
 
@@ -1574,8 +1574,8 @@ func TestCreate_WithVariableParent(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected Create, got %T", cmd)
 	}
-	if c.Parent == nil || *c.Parent != "chain" {
-		t.Fatalf("expected parent 'chain', got %v", c.Parent)
+	if c.Parent == nil || *c.Parent != "$chain" {
+		t.Fatalf("expected parent '$chain', got %v", c.Parent)
 	}
 }
 
@@ -1767,6 +1767,37 @@ func TestError_BlueprintNoArgs(t *testing.T) {
 	}
 }
 
+func TestDownloadHostTreasury(t *testing.T) {
+	cmd := mustParseLine(t, `download host treasury id($treasury_id) "/tmp"`)
+	d, ok := cmd.(DownloadTreasury)
+	if !ok {
+		t.Fatalf("expected DownloadTreasury, got %T", cmd)
+	}
+	if !d.Host {
+		t.Fatal("expected host download")
+	}
+	if d.TreasuryId != "$treasury_id" {
+		t.Fatalf("treasury id = %q", d.TreasuryId)
+	}
+	if d.Directory == nil || *d.Directory != "/tmp" {
+		t.Fatalf("directory = %v", d.Directory)
+	}
+}
+
+func TestUploadHostBackup(t *testing.T) {
+	cmd := mustParseLine(t, "upload host backup $file")
+	u, ok := cmd.(UploadBackup)
+	if !ok {
+		t.Fatalf("expected UploadBackup, got %T", cmd)
+	}
+	if !u.Host {
+		t.Fatal("expected host upload")
+	}
+	if u.File != "$file" {
+		t.Fatalf("file = %q", u.File)
+	}
+}
+
 func TestError_ConvertBadSyntax(t *testing.T) {
 	_, err := ParseLine("convert $data")
 	if err == nil {
@@ -1774,9 +1805,17 @@ func TestError_ConvertBadSyntax(t *testing.T) {
 	}
 }
 
-func TestError_AssignmentNoOperator(t *testing.T) {
-	_, err := ParseLine("$var")
-	if err == nil {
-		t.Fatal("expected error")
+func TestBareVariableDisplay(t *testing.T) {
+	cmd := mustParseLine(t, "$var")
+	vc, ok := cmd.(ValueCmd)
+	if !ok {
+		t.Fatalf("expected ValueCmd, got %T", cmd)
+	}
+	vr, ok := vc.Value.(VariableRef)
+	if !ok {
+		t.Fatalf("expected VariableRef, got %T", vc.Value)
+	}
+	if vr.Name != "var" {
+		t.Fatalf("expected var, got %s", vr.Name)
 	}
 }

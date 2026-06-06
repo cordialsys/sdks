@@ -119,20 +119,20 @@ var pluralResourceTypes = map[string]ResourceType{
 
 // variantSets maps resource types to their allowed variant strings.
 var variantSets = map[ResourceType][]string{
-	ResourceAccount:    {"internal", "shared", "external", "contract", "validator"},
-	ResourceAddress:    {"internal", "shared", "external", "contract", "validator"},
-	ResourceUser:       {"human", "machine"},
-	ResourceCredential: {"k256", "p256", "invite", "ed255", "web-authn", "web-authn-uv"},
-	ResourceKey:        {"engine", "shared", "user", "internal"},
-	ResourceAccessRule: {"allow", "require", "deny"},
+	ResourceAccount:      {"internal", "shared", "external", "contract", "validator"},
+	ResourceAddress:      {"internal", "shared", "external", "contract", "validator"},
+	ResourceUser:         {"human", "machine"},
+	ResourceCredential:   {"k256", "p256", "invite", "ed255", "web-authn", "web-authn-uv"},
+	ResourceKey:          {"engine", "shared", "user", "internal"},
+	ResourceAccessRule:   {"allow", "require", "deny"},
 	ResourceTransferRule: {"allow", "require", "deny"},
 	ResourceCallRule:     {"allow", "require", "deny"},
 	ResourceStakingRule:  {"allow", "require", "deny"},
-	ResourceClientKey:   {"k256", "p256", "invite", "ed255", "ed25519", "session"},
-	ResourceAsset:       {"native", "token"},
-	ResourceChain:       {"native", "custom"},
-	ResourceStaking:     {"stake", "unstake", "withdraw"},
-	ResourceSignatory:   {"mock-yubi-hsm2", "yubi-hsm2"},
+	ResourceClientKey:    {"k256", "p256", "invite", "ed255", "ed25519", "session"},
+	ResourceAsset:        {"native", "token"},
+	ResourceChain:        {"native", "custom"},
+	ResourceStaking:      {"stake", "unstake", "withdraw"},
+	ResourceSignatory:    {"mock-yubi-hsm2", "yubi-hsm2"},
 }
 
 // ---------------------------------------------------------------------------
@@ -253,7 +253,6 @@ func (p *parser) parseLine(raw string) (Command, error) {
 		if strings.Contains(line, "=") || strings.Contains(line, ":=") {
 			return p.parseAssignment(line)
 		}
-		// Bare variable display
 		val, err := p.parseValueFromString(line)
 		if err != nil {
 			return nil, p.errorf("invalid variable reference: %s", line)
@@ -534,7 +533,8 @@ func (p *parser) parseCreateLike(line string, tokens []string) (*createParts, er
 
 func resolveIdToken(tok string, p *parser) string {
 	// id($var) or id("literal") – extract inner value.
-	// Preserve $ prefix so resolveStringOrVar can detect variable references.
+	// Preserve $ prefix so resolveStringOrVar can detect explicit variable
+	// references, while bare tokens like SOL remain literal IDs.
 	if strings.HasPrefix(tok, "id(") && strings.HasSuffix(tok, ")") {
 		inner := tok[3 : len(tok)-1]
 		return stripQuotes(inner)
@@ -918,22 +918,33 @@ func (p *parser) parseBlueprint(tokens []string) (Command, error) {
 }
 
 func (p *parser) parseDownload(tokens []string) (Command, error) {
-	if len(tokens) < 2 || tokens[0] != "treasury" {
-		return nil, p.errorf("expected 'download treasury <id> [directory]'")
+	host := false
+	if len(tokens) > 0 && tokens[0] == "host" {
+		host = true
+		tokens = tokens[1:]
 	}
-	cmd := DownloadTreasury{TreasuryId: tokens[1]}
+
+	if len(tokens) < 2 || tokens[0] != "treasury" {
+		return nil, p.errorf("expected 'download [host] treasury <id> [directory]'")
+	}
+	cmd := DownloadTreasury{TreasuryId: resolveIdToken(tokens[1], p), Host: host}
 	if len(tokens) >= 3 {
-		d := tokens[2]
+		d := stripQuotes(tokens[2])
 		cmd.Directory = &d
 	}
 	return cmd, nil
 }
 
 func (p *parser) parseUpload(tokens []string) (Command, error) {
-	if len(tokens) < 2 || tokens[0] != "backup" {
-		return nil, p.errorf("expected 'upload backup <file>'")
+	host := false
+	if len(tokens) > 0 && tokens[0] == "host" {
+		host = true
+		tokens = tokens[1:]
 	}
-	return UploadBackup{File: tokens[1]}, nil
+	if len(tokens) < 2 || tokens[0] != "backup" {
+		return nil, p.errorf("expected 'upload [host] backup <file>'")
+	}
+	return UploadBackup{File: stripQuotes(tokens[1]), Host: host}, nil
 }
 
 // ---------------------------------------------------------------------------
