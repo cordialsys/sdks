@@ -11,11 +11,19 @@ export {
   pluralToSingular,
   parseResourceName,
   allResourceTypes,
+  normalizeApiKey,
+  lookupTreasuryId,
 } from "./client/index.js";
 export type {
   TreasuryClientOptions,
   TreasuryError,
   ResourceTypeMeta,
+  ListOptions,
+  TreasuryResource,
+  TreasuryResourceMap,
+  TreasuryResourceName,
+  TreasuryResourcePage,
+  TreasuryResourceType,
 } from "./client/index.js";
 
 export { SigningKey, VerifyingKey } from "./crypto/keys.js";

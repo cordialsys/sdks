@@ -451,7 +451,7 @@ function compare(left: EvalValue, op: Comparator, right: EvalValue): boolean {
     const l = left.value;
     const r = right.value;
     switch (op) {
-      case "==": return l === r;
+      case "==": return l === r || (l === "submitting" && r === "signing");
       case "!=": return l !== r;
       case "<": return l < r;
       case "<=": return l <= r;

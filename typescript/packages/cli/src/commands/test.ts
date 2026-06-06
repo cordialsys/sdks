@@ -25,37 +25,15 @@ export async function runTests(
   testPath: string,
 ): Promise<{ results: TestResult[]; passed: number; failed: number }> {
   const stat = fs.statSync(testPath);
-  let files: string[];
-
-  if (stat.isDirectory()) {
-    files = fs
-      .readdirSync(testPath)
-      .filter((f) => f.endsWith(".csl"))
-      .map((f) => path.join(testPath, f))
-      .sort();
-  } else {
-    files = [testPath];
-  }
-
-  // Separate setup files (prefixed with _) from test files
-  const setupFiles = files.filter((f) => path.basename(f).startsWith("_"));
-  const testFiles = files.filter((f) => !path.basename(f).startsWith("_"));
-
   const results: TestResult[] = [];
 
-  // Run setup files first
-  for (const file of setupFiles) {
-    const result = await runSingleTest(client, file);
-    results.push(result);
-    if (!result.passed) {
-      console.error(`Setup file failed: ${file}`);
-      // Continue with other tests anyway
+  if (stat.isDirectory()) {
+    await runDirectory(client, testPath, results);
+  } else {
+    if (!testPath.endsWith(".csl")) {
+      throw new Error(`Not a CSL test file: ${testPath}`);
     }
-  }
-
-  // Run test files
-  for (const file of testFiles) {
-    const result = await runSingleTest(client, file);
+    const result = await runSingleTest(client, testPath);
     results.push(result);
   }
 
@@ -63,6 +41,38 @@ export async function runTests(
   const failed = results.filter((r) => !r.passed).length;
 
   return { results, passed, failed };
+}
+
+async function runDirectory(
+  client: TreasuryClient,
+  dir: string,
+  results: TestResult[],
+): Promise<void> {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const files = entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".csl"))
+    .map((entry) => path.join(dir, entry.name))
+    .sort();
+
+  const setupFiles = files.filter((file) => path.basename(file).startsWith("_"));
+  const testFiles = files.filter((file) => !path.basename(file).startsWith("_"));
+
+  for (const file of [...setupFiles, ...testFiles]) {
+    const result = await runSingleTest(client, file);
+    results.push(result);
+    if (!result.passed && path.basename(file).startsWith("_")) {
+      console.error(`Setup file failed: ${file}`);
+    }
+  }
+
+  const subdirs = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(dir, entry.name))
+    .sort();
+
+  for (const subdir of subdirs) {
+    await runDirectory(client, subdir, results);
+  }
 }
 
 async function runSingleTest(

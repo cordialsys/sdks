@@ -15,6 +15,7 @@ import {
   parseNormalAlgorithm,
   keccak256 as keccak256Fn,
   sha256 as sha256Fn,
+  type TreasuryResourceType,
 } from "@cordialsys/treasury-sdk";
 import { hex, base58 } from "@scure/base";
 import { secp256k1 } from "@noble/curves/secp256k1";
@@ -61,6 +62,42 @@ const GRPC_STATUS: Record<number, string> = {
   10: "Aborted", 11: "Out of Range", 12: "Unimplemented",
   13: "Internal", 14: "Unavailable", 15: "Data Loss", 16: "Unauthenticated",
 };
+
+const SDK_RESOURCE_TYPES = new Set<TreasuryResourceType>([
+  "access-rule",
+  "account",
+  "address",
+  "asset",
+  "call",
+  "call-rule",
+  "chain",
+  "credential",
+  "feature",
+  "host",
+  "key",
+  "operation",
+  "role",
+  "signatory",
+  "signature",
+  "signer",
+  "software-update",
+  "staking",
+  "staking-rule",
+  "symbol",
+  "tag",
+  "transaction",
+  "transfer",
+  "transfer-rule",
+  "treasury",
+  "type",
+  "user",
+]);
+
+function asSdkResourceType(resource: string): TreasuryResourceType | undefined {
+  return SDK_RESOURCE_TYPES.has(resource as TreasuryResourceType)
+    ? resource as TreasuryResourceType
+    : undefined;
+}
 
 /** Extract status string from operation error (handles both numeric gRPC codes and string statuses). */
 function opErrorStatus(error: Record<string, unknown>): string {
@@ -1104,6 +1141,8 @@ export class CslVm {
    * We replicate that here since we send raw JSON.
    */
   private expandResourceNames(resourceType: string, data: Record<string, unknown>): void {
+    this.expandNestedResourceNames(data);
+
     // account field: bare id -> "accounts/{id}"
     const account = data.account;
     if (typeof account === "string" && account !== "" && !account.includes("/")) {
@@ -1118,6 +1157,30 @@ export class CslVm {
     const symbol = data.symbol;
     if (typeof symbol === "string" && symbol !== "" && !symbol.includes("/")) {
       data.symbol = `chains/${symbol}/symbols/${symbol}`;
+    }
+  }
+
+  private expandNestedResourceNames(data: Record<string, unknown>): void {
+    for (const [key, value] of Object.entries(data)) {
+      if (key === "tag") {
+        if (typeof value === "string" && value !== "" && !value.includes("/")) {
+          data[key] = `tags/${value}`;
+        } else if (Array.isArray(value)) {
+          data[key] = value.map((item) =>
+            typeof item === "string" && item !== "" && !item.includes("/")
+              ? `tags/${item}`
+              : item,
+          );
+        }
+      } else if (value && typeof value === "object" && !Array.isArray(value)) {
+        this.expandNestedResourceNames(value as Record<string, unknown>);
+      } else if (Array.isArray(value)) {
+        for (const item of value) {
+          if (item && typeof item === "object" && !Array.isArray(item)) {
+            this.expandNestedResourceNames(item as Record<string, unknown>);
+          }
+        }
+      }
     }
   }
 
@@ -1146,10 +1209,16 @@ export class CslVm {
       return this.createClientKey({ ...create, partial: { ...create.partial, id: resolvedId, parentId: resolvedParentId } });
     }
 
-    const opName = await this.client.create(create.partial.resource, data, {
-      id: resolvedId,
-      parentId: resolvedParentId,
-    });
+    const sdkResourceType = asSdkResourceType(create.partial.resource);
+    const opName = sdkResourceType
+      ? await this.client.createResource(sdkResourceType, data, {
+          id: resolvedId,
+          parentId: resolvedParentId,
+        })
+      : await this.client.create(create.partial.resource, data, {
+          id: resolvedId,
+          parentId: resolvedParentId,
+        });
 
     if (direct) {
       return {
@@ -1179,7 +1248,17 @@ export class CslVm {
       partial.id = parts[parts.length - 1];
     }
 
+    await this.fetchCompletedResource(resourceName);
     return { name: resourceName, partial };
+  }
+
+  private async fetchCompletedResource(resourceName: string): Promise<void> {
+    try {
+      await this.client.get(resourceName);
+    } catch {
+      // Best effort parity with the Rust CSL VM, which displays the completed
+      // resource but does not otherwise use the response for control flow.
+    }
   }
 
   private variantToAlgorithm(variant?: string): NormalAlgorithm {
@@ -1244,13 +1323,10 @@ export class CslVm {
     const { resourceName, partial } = this.resolvePartialOrVariable(update.what);
     const changes = (await this.resolveInlineTable(update.data)) as Record<string, unknown>;
 
-    // Fetch current resource and merge changes (like Rust CSL VM)
-    const current = await this.client.get(resourceName);
-    for (const [key, value] of Object.entries(changes)) {
-      current[key] = value;
-    }
-
-    const opName = await this.client.update(resourceName, current);
+    const sdkResourceType = asSdkResourceType(partial.resource);
+    const opName = sdkResourceType
+      ? await this.client.updateResource(sdkResourceType, resourceName, changes)
+      : await this.client.update(resourceName, changes);
 
     if (direct) {
       return {
@@ -1269,6 +1345,7 @@ export class CslVm {
       );
     }
 
+    await this.fetchCompletedResource(resourceName);
     return { name: resourceName, partial };
   }
 
@@ -1286,7 +1363,10 @@ export class CslVm {
       return { name: resourceName, partial };
     }
 
-    const opName = await this.client.delete(resourceName);
+    const sdkResourceType = asSdkResourceType(partial.resource);
+    const opName = sdkResourceType
+      ? await this.client.deleteResource(sdkResourceType, resourceName)
+      : await this.client.delete(resourceName);
 
     if (direct) {
       return {
@@ -1460,7 +1540,7 @@ export class CslVm {
         );
       }
 
-      await sleep(100);
+      await sleep(1000);
     }
   }
 

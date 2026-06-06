@@ -17,8 +17,11 @@ import { runTests, printResults } from "./commands/test.js";
 
 interface GlobalOpts {
   baseUrl: string;
+  api?: string;
   treasuryId?: string;
   hostId?: string;
+  apiKey?: string;
+  signer?: string;
   key?: string;
 }
 
@@ -33,16 +36,22 @@ program
 
 program
   .option("-b, --base-url <url>", "Treasury API base URL", "http://127.0.0.1:8777")
+  .option("-a, --api <url>", "Alias for --base-url")
   .option("-t, --treasury-id <id>", "Treasury ID")
   .option("-H, --host-id <id>", "Host ID")
+  .option("--api-key <key>", "Treasury API key")
+  .option("-s, --signer <name>", "Alias for --key")
   .option("-k, --key <name>", "Signing key name from keyring");
 
 // --- Helper to build a client from global options ---
 
 function buildClient(opts: {
   baseUrl: string;
+  api?: string;
   treasuryId?: string;
   hostId?: string;
+  apiKey?: string;
+  signer?: string;
   key?: string;
 }): TreasuryClient {
   const treasuryId = opts.treasuryId || process.env.TREASURY_ID || "";
@@ -51,10 +60,10 @@ function buildClient(opts: {
     process.exit(1);
   }
 
-  const baseUrl = opts.baseUrl || process.env.TREASURY_BASE_URL || "http://127.0.0.1:8777";
+  const baseUrl = opts.api || opts.baseUrl || process.env.TREASURY_BASE_URL || "http://127.0.0.1:8777";
 
   let signingKey: SigningKey | undefined;
-  const keyName = opts.key || process.env.TREASURY_KEY;
+  const keyName = opts.key || opts.signer || process.env.TREASURY_KEY;
   if (keyName) {
     const keyring = new Keyring(treasuryId);
     signingKey = keyring.getSigningKey(keyName) ?? undefined;
@@ -64,6 +73,7 @@ function buildClient(opts: {
     baseUrl,
     treasuryId,
     hostId: opts.hostId || process.env.TREASURY_HOST_ID,
+    apiKey: opts.apiKey || process.env.TREASURY_API_KEY,
     signingKey,
   });
 }
@@ -73,10 +83,12 @@ function buildClient(opts: {
 program
   .command("script")
   .description("Execute a CSL script file")
+  .option("-a, --api <url>", "Treasury API base URL")
+  .option("-s, --signer <name>", "Signing key name from keyring")
   .requiredOption("-f, --file <path>", "Path to CSL script file")
   .action(async (cmdOpts) => {
     const globalOpts = program.opts<GlobalOpts>();
-    const client = buildClient(globalOpts);
+    const client = buildClient({ ...globalOpts, api: cmdOpts.api || globalOpts.api, signer: cmdOpts.signer || globalOpts.signer });
     const filePath = path.resolve(cmdOpts.file);
 
     if (!fs.existsSync(filePath)) {
@@ -99,9 +111,11 @@ program
   .command("test")
   .description("Run CSL test files")
   .argument("<path>", "Path to test file or directory")
-  .action(async (testPath: string) => {
+  .option("-a, --api <url>", "Treasury API base URL")
+  .option("-s, --signer <name>", "Signing key name from keyring")
+  .action(async (testPath: string, cmdOpts) => {
     const globalOpts = program.opts<GlobalOpts>();
-    const client = buildClient(globalOpts);
+    const client = buildClient({ ...globalOpts, api: cmdOpts.api || globalOpts.api, signer: cmdOpts.signer || globalOpts.signer });
     const resolved = path.resolve(testPath);
 
     if (!fs.existsSync(resolved)) {
@@ -129,9 +143,11 @@ configCmd
     const opts = program.opts<GlobalOpts>();
     console.log(JSON.stringify({
       baseUrl: opts.baseUrl || process.env.TREASURY_BASE_URL || "http://127.0.0.1:8777",
+      api: opts.api || "(not set)",
       treasuryId: opts.treasuryId || process.env.TREASURY_ID || "(not set)",
       hostId: opts.hostId || process.env.TREASURY_HOST_ID || "(not set)",
-      key: opts.key || process.env.TREASURY_KEY || "(not set)",
+      apiKey: opts.apiKey || process.env.TREASURY_API_KEY ? "(set)" : "(not set)",
+      key: opts.key || opts.signer || process.env.TREASURY_KEY || "(not set)",
     }, null, 2));
   });
 

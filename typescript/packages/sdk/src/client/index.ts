@@ -3,15 +3,37 @@
  */
 import { SigningKey } from "../crypto/keys.js";
 import { signRequest } from "../signature/index.js";
-import { buildResourcePath, actionMethod, getResourceType } from "./resource-types.js";
+import { buildResourcePath, actionMethod, getResourceType, getResourceTypeBySingular } from "./resource-types.js";
+import type {
+  TreasuryResource,
+  TreasuryResourceName,
+  TreasuryResourcePage,
+  TreasuryResourceType,
+} from "./resources.js";
+import type {
+  Account,
+  AccountName,
+  AccountPage,
+  ExplicitFeePayerPolicy,
+  Operation,
+  OperationName,
+} from "../types/resources.js";
 
 export { buildResourcePath, actionMethod, getResourceType, getResourceTypeBySingular, getResourceTypeByPlural, singularToPlural, pluralToSingular, parseResourceName, allResourceTypes } from "./resource-types.js";
 export type { ResourceTypeMeta } from "./resource-types.js";
+export type {
+  TreasuryResource,
+  TreasuryResourceMap,
+  TreasuryResourceName,
+  TreasuryResourcePage,
+  TreasuryResourceType,
+} from "./resources.js";
 
 export interface TreasuryClientOptions {
-  baseUrl: string;
+  baseUrl?: string;
   treasuryId: string;
   hostId?: string;
+  apiKey?: string;
   signingKey?: SigningKey;
   timeout?: number;
 }
@@ -47,18 +69,29 @@ export class TreasuryApiError extends Error {
 }
 
 export class TreasuryClient {
+  static readonly defaultBaseUrl = "https://treasury.cordialapis.com/";
+
   readonly baseUrl: string;
   readonly treasuryId: string;
   readonly hostId?: string;
+  readonly apiKey?: string;
   private _signingKey?: SigningKey;
   private _timeout: number;
 
   constructor(opts: TreasuryClientOptions) {
-    this.baseUrl = opts.baseUrl.replace(/\/$/, "");
+    this.baseUrl = (opts.baseUrl ?? TreasuryClient.defaultBaseUrl).replace(/\/$/, "");
     this.treasuryId = opts.treasuryId;
     this.hostId = opts.hostId;
+    this.apiKey = opts.apiKey ? normalizeApiKey(opts.apiKey) : undefined;
     this._signingKey = opts.signingKey;
     this._timeout = opts.timeout ?? 30000;
+
+    if (!this.treasuryId) {
+      throw new Error("treasuryId is required");
+    }
+    if (isDefaultBaseUrl(this.baseUrl) && !this.apiKey) {
+      throw new Error("apiKey is required when using the default Treasury API base URL");
+    }
   }
 
   get signingKey(): SigningKey | undefined {
@@ -91,11 +124,15 @@ export class TreasuryClient {
     const body = opts.body ?? "{}";
     const headers: Record<string, string> = {
       "content-type": "application/json",
-      treasury: this.treasuryId,
+      Treasury: this.treasuryId,
     };
 
     if (this.hostId) {
-      headers["treasury-host"] = this.hostId;
+      headers["Treasury-Host"] = this.hostId;
+    }
+
+    if (this.apiKey) {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
     }
 
     if (this._signingKey) {
@@ -215,7 +252,8 @@ export class TreasuryClient {
     data: Record<string, unknown>,
   ): Promise<string> {
     const path = `/${resourceName}`;
-    const body = JSON.stringify(data);
+    const existing = await this.get(resourceName);
+    const body = JSON.stringify({ ...existing, ...data });
     return this.extractOpName(await this.request({ method: "PUT", path, body }));
   }
 
@@ -225,6 +263,52 @@ export class TreasuryClient {
   async delete(resourceName: string): Promise<string> {
     const path = `/${resourceName}`;
     return this.extractOpName(await this.request({ method: "DELETE", path }));
+  }
+
+  async listResources<T extends TreasuryResourceType>(
+    resourceType: T,
+    opts?: ListOptions,
+  ): Promise<TreasuryResourcePage<T>> {
+    return (await this.list(resourceType, opts)) as TreasuryResourcePage<T>;
+  }
+
+  async getResource<T extends TreasuryResourceType>(
+    resourceType: T,
+    idOrName: TreasuryResourceName<T> | string,
+  ): Promise<TreasuryResource<T>> {
+    const plural = getResourceTypeBySingular(resourceType).plural;
+    return (await this.get(toResourceName(plural, idOrName))) as TreasuryResource<T>;
+  }
+
+  async createResource<T extends TreasuryResourceType>(
+    resourceType: T,
+    data: TreasuryResource<T>,
+    opts?: { id?: string; parentId?: string },
+  ): Promise<OperationName> {
+    return await this.create(resourceType, data as unknown as JsonObject, opts);
+  }
+
+  async updateResource<T extends TreasuryResourceType>(
+    resourceType: T,
+    idOrName: TreasuryResourceName<T> | string,
+    changes: Partial<TreasuryResource<T>>,
+  ): Promise<OperationName> {
+    const plural = getResourceTypeBySingular(resourceType).plural;
+    const resourceName = toResourceName(plural, idOrName);
+    const existing = await this.get(resourceName) as TreasuryResource<T>;
+    return this.extractOpName(await this.request({
+      method: "PUT",
+      path: `/${resourceName}`,
+      body: JSON.stringify({ ...existing, ...changes }),
+    }));
+  }
+
+  async deleteResource<T extends TreasuryResourceType>(
+    resourceType: T,
+    idOrName: TreasuryResourceName<T> | string,
+  ): Promise<OperationName> {
+    const plural = getResourceTypeBySingular(resourceType).plural;
+    return await this.delete(toResourceName(plural, idOrName));
   }
 
   /**
@@ -320,6 +404,62 @@ export class TreasuryClient {
     return this.get(operationName);
   }
 
+  async getOperationTyped(operationName: OperationName): Promise<Operation> {
+    return (await this.get(operationName)) as Operation;
+  }
+
+  async listAccounts(opts?: ListOptions): Promise<AccountPage> {
+    return (await this.list("account", opts)) as AccountPage;
+  }
+
+  async getAccount(account: AccountName | string): Promise<Account> {
+    return (await this.get(toResourceName("accounts", account))) as Account;
+  }
+
+  async createAccount(
+    data: Account,
+    opts?: { id?: string },
+  ): Promise<OperationName> {
+    return await this.create("account", data as JsonObject, { id: opts?.id });
+  }
+
+  async importAccount(account: string, data: Account): Promise<OperationName> {
+    return this.extractOpName(await this.request({
+      method: "POST",
+      path: `/accounts/${account}`,
+      body: JSON.stringify(data),
+    }));
+  }
+
+  async updateAccount(
+    account: AccountName | string,
+    changes: Partial<Account>,
+  ): Promise<OperationName> {
+    const resourceName = toResourceName("accounts", account);
+    const existing = await this.getAccount(resourceName);
+    return this.extractOpName(await this.request({
+      method: "PUT",
+      path: `/${resourceName}`,
+      body: JSON.stringify({ ...existing, ...changes }),
+    }));
+  }
+
+  async deleteAccount(account: AccountName | string): Promise<OperationName> {
+    return this.delete(toResourceName("accounts", account));
+  }
+
+  async setAccountFeePayer(
+    account: AccountName | string,
+    policy: ExplicitFeePayerPolicy,
+  ): Promise<OperationName> {
+    const resourceName = toResourceName("accounts", account);
+    return this.extractOpName(await this.request({
+      method: "POST",
+      path: `/${resourceName}/fee-payer`,
+      body: JSON.stringify(policy),
+    }));
+  }
+
   /**
    * Poll an operation until it reaches a terminal state.
    */
@@ -401,4 +541,67 @@ export class TreasuryClient {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+type JsonObject = Record<string, unknown>;
+
+export interface ListOptions {
+  parentId?: string;
+  filter?: string;
+  orderBy?: string;
+  pageSize?: number;
+  pageToken?: string;
+  deleted?: boolean;
+}
+
+function toResourceName(plural: string, idOrName: string): string {
+  return idOrName.includes("/") ? idOrName : `${plural}/${idOrName}`;
+}
+
+function isDefaultBaseUrl(baseUrl: string): boolean {
+  return baseUrl.replace(/\/$/, "") === TreasuryClient.defaultBaseUrl.replace(/\/$/, "");
+}
+
+export function normalizeApiKey(apiKey: string): string {
+  const trimmed = apiKey.trim();
+  if (!trimmed) {
+    throw new Error("apiKey must not be empty");
+  }
+  const normalized = trimmed.replace(/=+$/, "");
+  try {
+    const encoded = Buffer.from(trimmed, "base64").toString("base64").replace(/=+$/, "");
+    if (encoded === normalized) {
+      return trimmed;
+    }
+  } catch {
+    // Fall through and encode below.
+  }
+  return Buffer.from(trimmed, "utf8").toString("base64");
+}
+
+export async function lookupTreasuryId(
+  baseUrl = TreasuryClient.defaultBaseUrl,
+  opts?: { apiKey?: string; timeout?: number },
+): Promise<string> {
+  const url = new URL("/v1/treasury", baseUrl);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), opts?.timeout ?? 30000);
+  try {
+    const headers: Record<string, string> = {};
+    if (opts?.apiKey) {
+      headers["Authorization"] = `Bearer ${normalizeApiKey(opts.apiKey)}`;
+    }
+    const response = await fetch(url.toString(), { headers, signal: controller.signal });
+    if (!response.ok) {
+      throw new Error(`Unable to look up treasury ID: HTTP ${response.status}`);
+    }
+    const body = await response.json() as { name?: string };
+    const name = body.name;
+    if (!name?.startsWith("treasuries/")) {
+      throw new Error("Unable to look up treasury ID: response did not include a treasury name");
+    }
+    return name.slice("treasuries/".length);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }

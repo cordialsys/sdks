@@ -1155,6 +1155,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/{user}/approvables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List approvable operations
+         * @description Show operations that can currently be approved by the user.  Added in `25.15.4`.
+         */
+        get: operations["list-approvable-operations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{user}/heartbeat": {
         parameters: {
             query?: never;
@@ -1900,6 +1920,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/chains/{chain}/addresses/{address}/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Address Transactions
+         * @description Returns the queue of on-going transactions for an address.  Added in `26.16.1`.
+         */
+        get: operations["list-address-transactions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1923,8 +1963,8 @@ export interface components {
         AccountName: string;
         /**
          * AddressVariant
-         * @description Internal means the engine has the key, external means it does not.
-         *     Shared means the engine has the key, but it can also be used in Create Signature.
+         * @description `internal` means the engine has the key, `external` means it does not.
+         *     The `shared` variant is deprecated: it meant that the `key` was `shared` and hence allowed use via the (dangerous) raw signing API. There is now an `allow_dangerous_raw_signing` flag instead.
          * @enum {string}
          */
         AddressVariant: "internal" | "shared" | "external" | "contract" | "validator";
@@ -2103,7 +2143,7 @@ export interface components {
          * @example create
          * @enum {string}
          */
-        Action: "create" | "get" | "list" | "update" | "delete" | "custom/activate" | "custom/disable" | "custom/abort" | "custom/retry" | "custom/price" | "custom/heartbeat" | "custom/cancel" | "custom/recheck";
+        Action: "create" | "get" | "list" | "update" | "delete" | "custom/activate" | "custom/disable" | "custom/abort" | "custom/retry" | "custom/price" | "custom/heartbeat" | "custom/cancel" | "custom/recheck" | "custom/share" | "custom/load" | "custom/restore" | "custom/set" | "custom/fail" | "custom/fee-payer" | "custom/confirm";
         /**
          * Partial Resource Name
          * @description The triple (parent, id, extension) of IDs is a higher-level than the URL path to which they correspond, but lower-level than the resource name or parent to which it corresponds (depending on the Action and whether the resource type is nested or not).
@@ -2203,6 +2243,8 @@ export interface components {
          * @description An account is a container for addresses. Adding or removing an address should usually be permissioned, as transfer rules may be formulated in terms of accounts, and have cascading effects on addresses.
          */
         AccountData: {
+            /** @description `INPUT-ONLY`, immutable */
+            allow_dangerous_raw_signing?: boolean;
             /**
              * @description The addresses belonging to this account.
              *     It's recommended to not use this field, and to query addresses directly with a filter for the account.
@@ -2291,13 +2333,20 @@ export interface components {
             name?: components["schemas"]["AddressName"];
             variant?: components["schemas"]["AddressVariant"];
             /** @description OUTPUT ONLY. */
-            state?: components["schemas"]["BasicState"];
+            state?: components["schemas"]["AddressState"];
         } & components["schemas"]["Metadata"] & components["schemas"]["AddressData"];
+        /**
+         * AddressState
+         * @enum {string}
+         */
+        AddressState: "active" | "registering";
         /**
          * AddressData
          * @description Addresses come in internal and external variants.
          */
         AddressData: {
+            /** @description `INPUT-ONLY`, immutable */
+            allow_dangerous_raw_signing?: boolean;
             /** @description Use an existing key for the address.  If used, any `algorithm` input will be ignored.  Invalid keys for the chain will be rejected. */
             key?: components["schemas"]["KeyName"];
             /** @description Immutable. Optional in create requests. Valid blockchain address. */
@@ -2317,6 +2366,8 @@ export interface components {
             /** @description Only for validator addresses that are to be externally supplied. Designation for the validator providers, e.g. `asymmetric`. */
             provider?: string;
             fee_payer?: components["schemas"]["FeePayerPolicy"];
+            /** @description Set only if the chain requires the address to submit registration transactions in order to become active. */
+            transactions?: components["schemas"]["TransactionName"][];
         };
         /**
          * KeyName
@@ -2341,6 +2392,11 @@ export interface components {
          * @enum {string}
          */
         Algorithm: "ed255" | "k256-keccak" | "k256-sha2" | "p256" | "taproot" | "bls12-381-g2-blake2";
+        /**
+         * TransactionName
+         * @example transactions/123
+         */
+        TransactionName: string;
         /** AssetPage */
         AssetPage: {
             assets?: components["schemas"]["Asset"][];
@@ -2613,6 +2669,7 @@ export interface components {
             raw_id?: components["schemas"]["StdBase64"];
             /** @description `OUTPUT_ONLY`. This is only provided when the credential is a web-authn kind.  Base64 encoded. */
             aaguid?: components["schemas"]["StdBase64"];
+            rp_id_hash?: components["schemas"]["StdBase64"];
         };
         /**
          * StdBase64
@@ -2907,6 +2964,7 @@ export interface components {
             name: components["schemas"]["TransferName"];
             /** @description OUTPUT ONLY. */
             state: components["schemas"]["TransferState"];
+            variant?: components["schemas"]["TransferVariant"];
         } & components["schemas"]["Metadata"] & components["schemas"]["TransferData"];
         /**
          * TransferName
@@ -2926,6 +2984,12 @@ export interface components {
          * @enum {string}
          */
         TransferState: "preparing" | "signing" | "submitting" | "finalizing" | "succeeded" | "failed" | "queued" | "reverted";
+        /**
+         * TransferVariant
+         * @description `internal` if `to` is an internal or shared address, `external` if it is an external address
+         * @enum {string}
+         */
+        TransferVariant: "internal" | "external";
         /**
          * TransferData
          * @description Semantic representation of a transfer of one asset between two addresses.
@@ -2980,11 +3044,6 @@ export interface components {
             /** @description Option to set an alternative address to pay for fee. */
             payer?: components["schemas"]["AddressName"];
         };
-        /**
-         * TransactionName
-         * @example transactions/123
-         */
-        TransactionName: string;
         /**
          * TransactionError
          * @description An error with an on-going transaction.
@@ -3635,11 +3694,14 @@ export interface components {
         TransferRuleData: components["schemas"]["TransferFilter"] & components["schemas"]["QuorumFilter"];
         /** TransferFilter */
         TransferFilter: {
+            transfer?: components["schemas"]["TransferVariantFilter"];
             asset: components["schemas"]["AssetFilter"];
             amount?: components["schemas"]["AmountFilter"];
             from: components["schemas"]["AddressFilter"];
             to: components["schemas"]["AddressFilter"];
         };
+        /** TransferVariantFilter */
+        TransferVariantFilter: components["schemas"]["TransferVariant"] | components["schemas"]["TransferVariant"][];
         /** AssetFilter */
         AssetFilter: components["schemas"]["AssetFilterEntry"] | components["schemas"]["AssetFilterEntry"][] | components["schemas"]["AnyAsset"];
         /** AssetFilterEntry */
@@ -3674,12 +3736,18 @@ export interface components {
         /** AddressFilter */
         AddressFilter: components["schemas"]["AddressFilterEntry"] | components["schemas"]["AddressFilterEntry"][] | components["schemas"]["AnyAddress"];
         /** AddressFilterEntry */
-        AddressFilterEntry: components["schemas"]["AddressName"] | components["schemas"]["AccountName"] | components["schemas"]["AccountDefaults"];
+        AddressFilterEntry: components["schemas"]["AddressName"] | components["schemas"]["AccountName"] | components["schemas"]["AccountDefaults"] | components["schemas"]["TagCombination"];
         /**
          * AccountDefaults
          * @description Use in transfer policy: Binds to the default addresses of a given account.
          */
         AccountDefaults: string;
+        /**
+         * TagCombination
+         * @description One or more tag names, separated by " AND ". Filters and call/staking/transfer rules involving such an entry match if the given address is tagged with all listed tags. The special case of a single tag name is the most used.
+         * @example tags/a AND tags/b
+         */
+        TagCombination: string;
         /**
          * AnyAddress
          * @constant
@@ -3689,7 +3757,6 @@ export interface components {
         QuorumFilter: {
             initiate?: components["schemas"]["UserFilter"];
             approve?: components["schemas"]["UserFilter"];
-            cancel?: components["schemas"]["UserFilter"];
             approvals?: number;
         };
         /** TypePage */
@@ -3699,8 +3766,7 @@ export interface components {
         /** Type */
         Type: {
             name?: components["schemas"]["TypeName"];
-            state?: components["schemas"]["BasicState"];
-        } & components["schemas"]["Metadata"] & components["schemas"]["TypeData"];
+        } & components["schemas"]["TypeData"];
         /**
          * TypeName
          * @example types/Transfer
@@ -3735,6 +3801,8 @@ export interface components {
             plural?: components["schemas"]["Id"];
             /** @description All valid variants of the resource - if it has variants. */
             variants?: string[];
+            /** @description All valid states of a resource.  Added in `26.15.6`. */
+            states?: string[];
         };
         /**
          * Treasury
@@ -3786,6 +3854,7 @@ export interface components {
             };
             /** @description This is currently unused in production environments. */
             sso_created_user_initial_roles?: string[];
+            usage?: components["schemas"]["Usage"];
         };
         /**
          * Block
@@ -3841,6 +3910,25 @@ export interface components {
             id?: components["schemas"]["Id"];
             /** @description Public backup age key. */
             key?: string;
+        };
+        /** Usage */
+        Usage: {
+            addresses?: {
+                internal: number;
+                external: number;
+                contract: number;
+                validator: number;
+            };
+            users?: {
+                human: number;
+                machine: number;
+            };
+            keys?: {
+                internal: number;
+                shared: number;
+                user: number;
+            };
+            signatures: number;
         };
         /** TreasuryPage */
         TreasuryPage: {
@@ -4078,6 +4166,13 @@ export interface components {
              */
             lookup_id?: string;
             skip_broadcast?: boolean;
+            /** @description Indicate if this is indexed on Oracle API or not. */
+            indexed?: boolean;
+            /**
+             * @description List of addresses that are involved in signing the transaction.
+             *     Added in `26.16.1`.
+             */
+            from: components["schemas"]["OneOrMoreAddressNames"];
         };
         /** AssetAndSymbolAndAmount */
         AssetAndSymbolAndAmount: {
@@ -4087,7 +4182,15 @@ export interface components {
             symbol?: string;
         };
         /** TransactionOrigin */
-        TransactionOrigin: components["schemas"]["TransferName"] | components["schemas"]["StakingName"];
+        TransactionOrigin: components["schemas"]["TransferName"] | components["schemas"]["StakingName"] | components["schemas"]["CallName"];
+        /**
+         * CallName
+         * @description The name of a Call
+         * @example calls/42
+         */
+        CallName: string;
+        /** OneOrMoreAddressNames */
+        OneOrMoreAddressNames: components["schemas"]["AddressName"] | components["schemas"]["AddressName"][];
         /** SoftwareUpdatePage */
         SoftwareUpdatePage: {
             "software-updates"?: components["schemas"]["SoftwareUpdate"][];
@@ -4300,6 +4403,18 @@ export interface components {
             to?: components["schemas"]["AddressChoice"];
             priority?: components["schemas"]["Priority"];
         };
+        /** Event */
+        Event: {
+            treasury_id?: string;
+            host_id?: string;
+            block_height?: number;
+            action?: components["schemas"]["Action"];
+            type?: components["schemas"]["ResourceType"];
+            resource?: Record<string, never>;
+            index?: number;
+            operation?: components["schemas"]["OperationName"];
+            initiator?: string;
+        };
         /** Signatory */
         Signatory: {
             name?: components["schemas"]["SignatoryName"];
@@ -4431,13 +4546,15 @@ export interface components {
         StakingRuleData: components["schemas"]["StakingFilter"] & components["schemas"]["QuorumFilter"];
         /** StakingFilter */
         StakingFilter: {
+            /** @description Must have at least one staking variant. */
+            staking?: components["schemas"]["StakingVariantFilter"];
             asset: components["schemas"]["AssetFilter"];
             amount?: components["schemas"]["AmountFilter"];
             from: components["schemas"]["AddressFilter"];
             to: components["schemas"]["AddressFilter"];
-            /** @description Must have at least one staking variant. */
-            staking: components["schemas"]["StakingVariant"][];
         };
+        /** StakingVariantFilter */
+        StakingVariantFilter: components["schemas"]["StakingVariant"] | components["schemas"]["StakingVariant"][];
         /** TagPage */
         TagPage: {
             tags?: components["schemas"]["Tag"][];
@@ -4464,19 +4581,20 @@ export interface components {
         Call: {
             name?: components["schemas"]["CallName"];
             state?: components["schemas"]["CallState"];
+            variant?: components["schemas"]["CallVariant"];
         } & components["schemas"]["Metadata"] & components["schemas"]["CallData"];
-        /**
-         * CallName
-         * @description The name of a Call
-         * @example calls/42
-         */
-        CallName: string;
         /**
          * CallState
          * @description In the `active` state, the subordinate resource is being processed, lookup its state for more details.
          * @enum {string}
          */
         CallState: "active" | "succeeded" | "failed";
+        /**
+         * CallVariant
+         * @description Call operations. The `signature` calls are not dangerous (not raw-signing).
+         * @enum {string}
+         */
+        CallVariant: "signature" | "transaction";
         /**
          * CallData
          * @description The call `method` determines the variants of `request` and `response` that are permissible.
@@ -4497,16 +4615,25 @@ export interface components {
          */
         CallData: {
             address: components["schemas"]["AddressName"];
+            origin?: components["schemas"]["Origin"];
             method: components["schemas"]["CallMethod"];
             request: components["schemas"]["CallRequest"];
             parse?: components["schemas"]["CallParse"];
             response?: components["schemas"]["CallResponse"];
+            /** @description `OUTPUT_ONLY`.  This will output the contract address(es) that this call interacts with, if any. */
+            to?: components["schemas"]["OneOrMoreAddressNames"];
         };
+        /**
+         * Origin
+         * @description Scheme, host, and port component of a URL
+         * @example https://polymarket.com
+         */
+        Origin: string;
         /**
          * CallMethod
          * @enum {string}
          */
-        CallMethod: "eth_sendTransaction" | "eth_signTransaction" | "personal_sign" | "eth_signTypedData_v4" | "solana:signIn" | "solana:signMessage" | "solana:signTransaction" | "solana:signAndSendTransaction";
+        CallMethod: "eth_sendTransaction" | "eth_signTransaction" | "personal_sign" | "eth_signTypedData_v4" | "solana:signIn" | "solana:signMessage" | "solana:signTransaction" | "solana:signAndSendTransaction" | "canton:accept";
         /** CallRequest */
         CallRequest: components["schemas"]["UnsignedMessage"] | components["schemas"]["UnsignedEvmTransaction"] | components["schemas"]["UnsignedSvmTransaction"] | components["schemas"]["Eip712TypedData"];
         /** UnsignedMessage */
@@ -4573,8 +4700,6 @@ export interface components {
             from: components["schemas"]["OneOrMoreAddressNames"];
             to: components["schemas"]["OneOrMoreAddressNames"];
         };
-        /** OneOrMoreAddressNames */
-        OneOrMoreAddressNames: components["schemas"]["AddressName"] | components["schemas"]["AddressName"][];
         /**
          * CallResponse
          * @description Names the subordinate `signature` (for signing calls such as `personal_sign` and `solana:signMessage`) or `transaction` (for transactioning calls such as `eth_sendTransaction`, `eth_signTransaction`, `solana:signTransaction`, `solana:signAndSendTransaction`).
@@ -4615,7 +4740,7 @@ export interface components {
         } & components["schemas"]["Pagination"];
         /**
          * CallRule
-         * @description This is analogou to transfer rules, except the `to` address must be a `validator` address.
+         * @description This is analogous to transfer rules, except the `to` address must be a `validator` address.
          */
         CallRule: {
             /** @description OUTPUT ONLY. */
@@ -4633,15 +4758,13 @@ export interface components {
         CallRuleData: components["schemas"]["CallFilter"] & components["schemas"]["QuorumFilter"];
         /** CallFilter */
         CallFilter: {
-            method: components["schemas"]["MethodFilter"];
+            call?: components["schemas"]["CallVariantFilter"];
+            method?: components["schemas"]["MethodFilter"];
         } & components["schemas"]["ParseFilter"];
+        /** CallVariantFilter */
+        CallVariantFilter: components["schemas"]["CallVariant"] | components["schemas"]["CallVariant"][];
         /** MethodFilter */
-        MethodFilter: components["schemas"]["CallMethod"] | components["schemas"]["CallMethod"][] | components["schemas"]["AnyMethod"];
-        /**
-         * AnyMethod
-         * @constant
-         */
-        AnyMethod: "any/method";
+        MethodFilter: components["schemas"]["CallMethod"] | components["schemas"]["CallMethod"][];
         /** ParseFilter */
         ParseFilter: {
             from: components["schemas"]["AddressFilter"];
@@ -7637,6 +7760,28 @@ export interface operations {
             };
         };
     };
+    "list-approvable-operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationPage"];
+                };
+            };
+        };
+    };
     "heartbeat-user": {
         parameters: {
             query?: never;
@@ -7897,7 +8042,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["Event"];
                 };
             };
         };
@@ -8763,6 +8908,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OperationName"];
+                };
+            };
+        };
+    };
+    "list-address-transactions": {
+        parameters: {
+            query?: {
+                /** @description A filter to apply before filling out the page (https://docs.cordialsystems.com/reference/filtering). */
+                filter?: components["parameters"]["filter"];
+            };
+            header?: never;
+            path: {
+                chain: string;
+                address: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionPage"];
                 };
             };
         };
