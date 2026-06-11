@@ -1,0 +1,66 @@
+name: SDK CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  lint-test:
+    name: ${{ matrix.sdk }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sdk: go
+            working-directory: go
+          - sdk: rust
+            working-directory: rust
+          - sdk: typescript
+            working-directory: typescript
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.working-directory }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install just
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just
+
+      - name: Set up Go
+        if: matrix.sdk == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+
+      - name: Set up Rust
+        if: matrix.sdk == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy,rustfmt
+
+      - name: Set up Node
+        if: matrix.sdk == 'typescript'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+
+      - name: Install TypeScript dependencies
+        if: matrix.sdk == 'typescript'
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: just lint
+
+      - name: Test
+        run: just test

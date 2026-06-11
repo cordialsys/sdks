@@ -1,0 +1,39 @@
+[package]
+name = "cordial-treasury"
+version = "0.1.0"
+edition = "2024"
+description = "Rust SDK and CLI for the Cordial Treasury API"
+license = "Apache-2.0"
+repository = "https://github.com/cordialsys/sdk"
+
+[lib]
+name = "cordial_treasury"
+path = "src/lib.rs"
+
+[[bin]]
+name = "treasury-rs"
+path = "src/main.rs"
+
+[dependencies]
+base64 = "0.22"
+clap = { version = "4.5", features = ["derive", "env"] }
+ed25519-dalek = { version = "2.2", features = ["rand_core"] }
+hex = "0.4"
+home = "0.5"
+k256 = { version = "0.13", features = ["ecdsa", "sha256"] }
+p256 = { version = "0.13", features = ["ecdsa", "sha256"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"
+toml = "0.9"
+url = "2.5"
+
+[dev-dependencies]
+httpmock = "0.8"
+tempfile = "3"
+
+[build-dependencies]
+serde_yaml = "0.9"

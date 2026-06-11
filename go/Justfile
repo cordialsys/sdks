@@ -1,0 +1,12 @@
+# List all recipes
+list:
+    just --list
+
+# Run unit tests
+test:
+    go test ./...
+
+# Run static checks
+lint:
+    test -z "$(gofmt -l .)"
+    go vet ./...
