@@ -1,7 +1,4 @@
-//! Cordial Treasury Rust SDK.
-//!
-//! This crate provides a typed client facade, keyring/signing helpers, and a
-//! compact CSL runner for Treasury scripts.
+#![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"))]
 
 pub mod client;
 pub mod csl;

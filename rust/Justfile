@@ -2,11 +2,20 @@
 list:
     just --list
 
-# Run unit tests
-test:
-    cargo test
+# Install `treasury-rs`
+install:
+    cargo install --path .
+
+# Format the code
+fmt:
+    cargo fmt --all
+    just --fmt
 
 # Run static checks
 lint:
     cargo fmt --check
     cargo clippy --all-targets --all-features -- -D warnings
+
+# Run unit tests
+test:
+    cargo test

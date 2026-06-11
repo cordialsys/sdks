@@ -1,9 +1,9 @@
-use cordial_treasury::client::{ClientBuilder, normalize_api_key};
-use cordial_treasury::csl::{Command, parse_line};
-use cordial_treasury::{AccountVariant, Keyring, ResourceType, SigningAlgorithm};
 use httpmock::Method::{GET, POST, PUT};
 use httpmock::MockServer;
 use serde_json::json;
+use treasury_sdk::client::{ClientBuilder, normalize_api_key};
+use treasury_sdk::csl::{Command, parse_line};
+use treasury_sdk::{AccountVariant, Keyring, ResourceType, SigningAlgorithm};
 
 #[test]
 fn normalizes_raw_api_keys() {
@@ -72,7 +72,7 @@ fn create_account_sends_treasury_and_authorization_headers() {
     let op = client
         .create_account(
             Some("acct-1"),
-            &cordial_treasury::CreateAccountRequest {
+            &treasury_sdk::CreateAccountRequest {
                 variant: AccountVariant::Shared,
                 metadata: Default::default(),
                 data,

@@ -29,8 +29,9 @@ fn main() {
         out.push('\n');
     }
 
-    let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR"));
-    fs::write(out_dir.join("openapi_types.rs"), out).expect("write generated OpenAPI types");
+    let out_file = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR")).join("openapi_types.rs");
+    println!("generating {}", out_file.display());
+    fs::write(out_file, out).expect("write generated OpenAPI types");
 }
 
 fn collect_enum(name: &str, schema: &Value, enums: &mut BTreeMap<String, GeneratedEnum>) {

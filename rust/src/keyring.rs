@@ -6,8 +6,8 @@ use std::str::FromStr;
 
 #[derive(Debug, thiserror::Error)]
 pub enum KeyringError {
-    #[error("home directory not found")]
-    MissingHome,
+    #[error("data directory not found")]
+    MissingDataDirectory,
     #[error("io: {0}")]
     Io(#[from] std::io::Error),
     #[error("toml: {0}")]
@@ -25,11 +25,9 @@ pub struct Keyring {
 
 impl Keyring {
     pub fn new(treasury_id: impl AsRef<str>) -> Result<Self, KeyringError> {
-        let home = home::home_dir().ok_or(KeyringError::MissingHome)?;
+        let data_dir = dirs::data_dir().ok_or(KeyringError::MissingDataDirectory)?;
         Ok(Self {
-            dir: home
-                .join(".local")
-                .join("share")
+            dir: data_dir
                 .join("treasury")
                 .join(treasury_id.as_ref())
                 .join("keyring"),
@@ -62,7 +60,8 @@ impl Keyring {
     pub fn save_key(&self, name: &str, identity: &Identity) -> Result<(), KeyringError> {
         fs::create_dir_all(&self.dir)?;
         let content = format!(
-            "algorithm = {:?}\nsecret_key = {:?}\npublic_key = {:?}\n",
+            "name = {:?}\nalgorithm = {:?}\nsecret_key = {:?}\npublic_key = {:?}\n",
+            format!("client-keys/{name}"),
             identity.algorithm.to_string(),
             identity.private_key_hex(),
             identity.public_key_hex
@@ -121,6 +120,8 @@ impl Keyring {
 
 #[derive(Debug, Deserialize)]
 struct StoredKey {
+    #[allow(dead_code)]
+    name: String,
     algorithm: String,
     secret_key: String,
     public_key: Option<String>,

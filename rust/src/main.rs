@@ -1,25 +1,31 @@
 use clap::{Parser, Subcommand};
-use cordial_treasury::client::{Client, ClientBuilder, ListOptions, lookup_treasury_id};
-use cordial_treasury::csl::{Vm, parse};
-use cordial_treasury::{Keyring, ResourceType};
 use serde_json::Value;
 use std::fs;
 use std::process::{Command as ProcessCommand, Stdio};
 use std::str::FromStr;
+use treasury_sdk::client::{Client, ClientBuilder, ListOptions, lookup_treasury_id};
+use treasury_sdk::csl::{Vm, parse};
+use treasury_sdk::{Keyring, ResourceType};
+
+pub const PUBLIC_API_URL: &str = "https://treasury.cordialapis.com";
 
 #[derive(Debug, Parser)]
-#[command(name = "treasury-rs", about = "Rust SDK CLI for Cordial Treasury")]
+#[command(
+    name = "treasury-rs",
+    about = "Basic Rust SDK CLI for Cordial Treasury"
+)]
 struct Cli {
     #[arg(
         short = 'a',
-        long = "api",
+        long = "api-url",
+        alias = "api",
         env = "TREASURY_API_URL",
-        default_value = "http://localhost:8777"
+        default_value = PUBLIC_API_URL,
     )]
     api_url: String,
     #[arg(short = 't', long = "treasury", env = "TREASURY_ID")]
     treasury_id: Option<String>,
-    #[arg(long = "api-key", env = "TREASURY_API_KEY")]
+    #[arg(short = 'k', long = "api-key", env = "TREASURY_API_KEY")]
     api_key: Option<String>,
     #[arg(short = 's', long = "sign-with")]
     sign_with: Option<String>,
