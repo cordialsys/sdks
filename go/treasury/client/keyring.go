@@ -4,27 +4,53 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
 // Keyring manages client signing keys stored on disk.
-// Keys are stored in ~/.treasury/{treasury_id}/keyring/ as TOML files,
-// matching the layout used by the Rust Treasury CLI.
+// Keys are stored under the platform data directory as TOML files.
 type Keyring struct {
 	// Dir is the directory where key files are stored.
 	Dir string
 }
 
 // NewKeyring creates a keyring for the given treasury ID.
-// Keys are stored at ~/.local/share/treasury/{treasuryID}/keyring/,
+// Keys are stored at {data_dir}/treasury/{treasuryID}/keyring/,
 // matching the Rust Treasury CLI's layout.
 func NewKeyring(treasuryID string) (*Keyring, error) {
-	home, err := os.UserHomeDir()
+	dataDir, err := dataDir()
 	if err != nil {
-		return nil, fmt.Errorf("getting home directory: %w", err)
+		return nil, err
 	}
-	dir := filepath.Join(home, ".local", "share", "treasury", treasuryID, "keyring")
+	dir := filepath.Join(dataDir, "treasury", treasuryID, "keyring")
 	return &Keyring{Dir: dir}, nil
+}
+
+func dataDir() (string, error) {
+	switch runtime.GOOS {
+	case "windows":
+		appData := os.Getenv("APPDATA")
+		if appData == "" {
+			return "", fmt.Errorf("APPDATA is not set")
+		}
+		return appData, nil
+	case "darwin":
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("getting home directory: %w", err)
+		}
+		return filepath.Join(home, "Library", "Application Support"), nil
+	default:
+		if xdgData := os.Getenv("XDG_DATA_HOME"); xdgData != "" {
+			return xdgData, nil
+		}
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("getting home directory: %w", err)
+		}
+		return filepath.Join(home, ".local", "share"), nil
+	}
 }
 
 // NewKeyringFromDir creates a keyring using a specific directory path.

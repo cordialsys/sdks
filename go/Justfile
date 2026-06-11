@@ -10,3 +10,7 @@ test:
 lint:
     test -z "$(gofmt -l .)"
     go vet ./...
+
+# Generate OpenAPI types
+typegen:
+    oapi-codegen -config oapi-codegen.yaml ../openapi/treasury.yaml

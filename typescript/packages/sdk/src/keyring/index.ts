@@ -1,8 +1,8 @@
 /**
  * Keyring - manages signing keys stored as TOML files.
  *
- * Key files are stored in: ~/.local/share/treasury/<treasury-id>/keyring/<key-name>.toml
- * (matches the Rust keyring's data_dir() which uses dirs::data_dir() + "treasury")
+ * Key files are stored under the platform data directory:
+ * <data-dir>/treasury/<treasury-id>/keyring/<key-name>.toml
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -19,16 +19,23 @@ export interface KeyringEntry {
 }
 
 /**
- * Determine the data directory, matching the Rust `dirs::data_dir()` + "treasury".
- * On Linux: ~/.local/share/treasury
+ * Determine the Treasury data directory, matching the Rust and Go keyrings.
+ * On Windows: %APPDATA%/treasury
  * On macOS: ~/Library/Application Support/treasury
+ * On Linux/Unix: $XDG_DATA_HOME/treasury or ~/.local/share/treasury
  */
 function defaultDataDir(): string {
   const platform = os.platform();
+  if (platform === "win32") {
+    const appData = process.env.APPDATA;
+    if (!appData) {
+      throw new Error("APPDATA is not set");
+    }
+    return path.join(appData, "treasury");
+  }
   if (platform === "darwin") {
     return path.join(os.homedir(), "Library", "Application Support", "treasury");
   }
-  // Linux and others: XDG_DATA_HOME or ~/.local/share
   const xdgData = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share");
   return path.join(xdgData, "treasury");
 }

@@ -17,7 +17,6 @@ path = "src/main.rs"
 [dependencies]
 base64 = "0.22"
 clap = { version = "4.5", features = ["derive", "env"] }
-dirs = "6"
 ed25519-dalek = { version = "2.2", features = ["rand_core"] }
 hex = "0.4"
 k256 = { version = "0.13", features = ["ecdsa", "sha256"] }
@@ -34,3 +33,6 @@ url = "2.5"
 [dev-dependencies]
 httpmock = "0.8"
 tempfile = "3"
+
+[target.'cfg(unix)'.dependencies]
+home = "0.5"

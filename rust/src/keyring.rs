@@ -25,7 +25,7 @@ pub struct Keyring {
 
 impl Keyring {
     pub fn new(treasury_id: impl AsRef<str>) -> Result<Self, KeyringError> {
-        let data_dir = dirs::data_dir().ok_or(KeyringError::MissingDataDirectory)?;
+        let data_dir = data_dir().ok_or(KeyringError::MissingDataDirectory)?;
         Ok(Self {
             dir: data_dir
                 .join("treasury")
@@ -125,4 +125,31 @@ struct StoredKey {
     algorithm: String,
     secret_key: String,
     public_key: Option<String>,
+}
+
+fn data_dir() -> Option<PathBuf> {
+    #[cfg(target_os = "windows")]
+    {
+        std::env::var_os("APPDATA")
+            .filter(|value| !value.is_empty())
+            .map(PathBuf::from)
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        home::home_dir().map(|home| home.join("Library").join("Application Support"))
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        std::env::var_os("XDG_DATA_HOME")
+            .filter(|value| !value.is_empty())
+            .map(PathBuf::from)
+            .or_else(|| home::home_dir().map(|home| home.join(".local").join("share")))
+    }
+
+    #[cfg(not(any(unix, target_os = "windows")))]
+    {
+        None
+    }
 }

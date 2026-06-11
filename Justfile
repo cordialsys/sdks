@@ -11,7 +11,21 @@ fetch api:
 
 # Generate OpenAPI types
 typegen:
-    just rust/ typegen
+    just all typegen
+
+# Run static checks for all SDKs
+lint:
+    just all lint
+
+# Run unit tests for all SDKs
+test:
+    just all test
+
+# Run a recipe in all SDKs
+all recipe:
+    just go/ {{ recipe }}
+    just rust/ {{ recipe }}
+    just typescript/ {{ recipe }}
 
 [private]
 fmt-just:
