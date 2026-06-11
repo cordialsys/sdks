@@ -3,10 +3,8 @@ use serde_json::{Map, Value};
 use std::fmt;
 use std::str::FromStr;
 
-/// OpenAPI enum types generated at build time from `../openapi/treasury.yaml`.
-pub mod openapi {
-    include!(concat!(env!("OUT_DIR"), "/openapi_types.rs"));
-}
+/// OpenAPI types generated from `../openapi/treasury.yaml`.
+pub mod openapi;
 
 pub type Object = Map<String, Value>;
 

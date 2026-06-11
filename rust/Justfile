@@ -16,6 +16,12 @@ lint:
     cargo fmt --check
     cargo clippy --all-targets --all-features -- -D warnings
 
+# Generate OpenAPI types
+typegen:
+    cargo run --manifest-path typegen/Cargo.toml -- ../openapi/treasury.yaml src/types/openapi.rs
+    cargo fmt --manifest-path typegen/Cargo.toml
+    cargo fmt --all
+
 # Run unit tests
 test:
     cargo test

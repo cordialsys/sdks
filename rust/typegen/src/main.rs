@@ -2,17 +2,56 @@ use serde_yaml::Value;
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process;
 
 fn main() {
-    println!("cargo:rerun-if-changed=../openapi/treasury.yaml");
-    let spec = fs::read_to_string("../openapi/treasury.yaml").expect("read OpenAPI spec");
-    let spec: Value = serde_yaml::from_str(&spec).expect("parse OpenAPI spec");
+    let args = Args::parse();
+    if let Err(err) = generate(&args.spec_path, &args.output_path) {
+        eprintln!("error: {err}");
+        process::exit(1);
+    }
+}
+
+struct Args {
+    spec_path: PathBuf,
+    output_path: PathBuf,
+}
+
+impl Args {
+    fn parse() -> Self {
+        let mut args = env::args_os().skip(1);
+        let spec_path = args
+            .next()
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("../openapi/treasury.yaml"));
+        let output_path = args
+            .next()
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("src/types/openapi.rs"));
+
+        if args.next().is_some() {
+            eprintln!("usage: cargo run --manifest-path typegen/Cargo.toml -- [spec] [output]");
+            process::exit(2);
+        }
+
+        Self {
+            spec_path,
+            output_path,
+        }
+    }
+}
+
+fn generate(spec_path: &Path, output_path: &Path) -> Result<(), String> {
+    let spec = fs::read_to_string(spec_path)
+        .map_err(|err| format!("read OpenAPI spec {}: {err}", spec_path.display()))?;
+    let spec: Value = serde_yaml::from_str(&spec)
+        .map_err(|err| format!("parse OpenAPI spec {}: {err}", spec_path.display()))?;
     let schemas = spec
         .get("components")
         .and_then(|v| v.get("schemas"))
         .and_then(Value::as_mapping)
-        .expect("components.schemas");
+        .ok_or_else(|| "missing components.schemas".to_string())?;
 
     let mut enums = BTreeMap::new();
     for (name, schema) in schemas {
@@ -22,16 +61,27 @@ fn main() {
         collect_enum(name, schema, &mut enums);
     }
 
-    let mut out = String::from("// Generated from ../openapi/treasury.yaml by build.rs.\n");
+    let mut out = format!(
+        "// Generated from {} by rust/typegen. Do not edit by hand.\n",
+        spec_path.display()
+    );
     out.push_str("use serde::{Deserialize, Serialize};\n\n");
     for (name, generated) in enums {
         out.push_str(&generated.render(&name));
         out.push('\n');
     }
 
-    let out_file = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR")).join("openapi_types.rs");
-    println!("generating {}", out_file.display());
-    fs::write(out_file, out).expect("write generated OpenAPI types");
+    if let Some(parent) = output_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        fs::create_dir_all(parent)
+            .map_err(|err| format!("create output directory {}: {err}", parent.display()))?;
+    }
+
+    fs::write(output_path, out)
+        .map_err(|err| format!("write generated types {}: {err}", output_path.display()))?;
+    println!("wrote {}", output_path.display());
+    Ok(())
 }
 
 fn collect_enum(name: &str, schema: &Value, enums: &mut BTreeMap<String, GeneratedEnum>) {
@@ -86,9 +136,14 @@ impl GeneratedEnum {
         let mut out = String::new();
         if let Some(description) = self.description.as_deref() {
             for line in description.lines() {
-                out.push_str("/// ");
-                out.push_str(line.trim());
-                out.push('\n');
+                let line = line.trim();
+                if line.is_empty() {
+                    out.push_str("///\n");
+                } else {
+                    out.push_str("/// ");
+                    out.push_str(line);
+                    out.push('\n');
+                }
             }
         }
         out.push_str("#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n");

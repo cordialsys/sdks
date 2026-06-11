@@ -71,8 +71,8 @@ cargo run --bin treasury-rs -- \
 
 ## OpenAPI Types
 
-`build.rs` reads `../openapi/treasury.yaml` and emits documented enum types under
-`treasury_sdk::types::openapi`. Hand-written request structs wrap the generated
+`just typegen` reads the OpenAPI spec `../openapi/treasury.yaml` and emits documented 
+types in `src/types/openapi.rs`. Hand-written request structs wrap the generated
 wire values with ergonomic typed create helpers. The client keeps a raw JSON boundary
 for GET/list/custom resources so newly added Treasury fields round-trip without SDK
 releases.
