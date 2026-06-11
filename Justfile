@@ -9,6 +9,24 @@ fetch-all: (fetch "admin") (fetch "auth") (fetch "connector") (fetch "oracle") (
 fetch api:
     curl -sSO --output-dir openapi https://api.stoplight.io/projects/$(just api-key {{ api }})/branches/main/export/reference/{{ api }}.yaml
 
+# Generate OpenAPI types
+typegen:
+    just all typegen
+
+# Run static checks for all SDKs
+lint:
+    just all lint
+
+# Run unit tests for all SDKs
+test:
+    just all test
+
+# Run a recipe in all SDKs
+all recipe:
+    just go/ {{ recipe }}
+    just rust/ {{ recipe }}
+    just typescript/ {{ recipe }}
+
 [private]
 fmt-just:
     just --fmt --unstable

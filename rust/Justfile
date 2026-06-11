@@ -1,0 +1,27 @@
+# List all recipes
+list:
+    just --list
+
+# Install `treasury-rs`
+install:
+    cargo install --path .
+
+# Format the code
+fmt:
+    cargo fmt --all
+    just --fmt
+
+# Run static checks
+lint:
+    cargo fmt --check
+    cargo clippy --all-targets --all-features -- -D warnings
+
+# Generate OpenAPI types
+typegen:
+    cargo run --manifest-path typegen/Cargo.toml -- ../openapi/treasury.yaml src/types/openapi.rs
+    cargo fmt --manifest-path typegen/Cargo.toml
+    cargo fmt --all
+
+# Run unit tests
+test:
+    cargo test

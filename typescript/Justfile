@@ -1,0 +1,16 @@
+# List all recipes
+list:
+    just --list
+
+# Run unit tests
+test:
+    PATH="$(pwd)/../.tools/node-v22.16.0-linux-x64/bin:$PATH" pnpm build
+    PATH="$(pwd)/../.tools/node-v22.16.0-linux-x64/bin:$PATH" pnpm test
+
+# Run static checks
+lint:
+    PATH="$(pwd)/../.tools/node-v22.16.0-linux-x64/bin:$PATH" pnpm build
+
+# Generate OpenAPI types
+typegen:
+    PATH="$(pwd)/../.tools/node-v22.16.0-linux-x64/bin:$PATH" pnpm generate:types

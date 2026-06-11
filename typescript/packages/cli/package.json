@@ -1,0 +1,26 @@
+{
+  "name": "@cordialsys/treasury-cli",
+  "version": "0.1.0",
+  "description": "Treasury CLI - Command-line interface for Treasury operations",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "treasury": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "echo 'No tests yet'"
+  },
+  "dependencies": {
+    "@cordialsys/treasury-sdk": "workspace:*",
+    "@cordialsys/treasury-csl": "workspace:*",
+    "commander": "^13.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.16",
+    "typescript": "^5.7.3"
+  },
+  "files": ["dist"],
+  "license": "MIT"
+}
